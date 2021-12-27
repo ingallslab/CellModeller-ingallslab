@@ -57,5 +57,12 @@ class ModuleRegulator:
         divfunc = getattr(self.module, "divide", None)
         if callable(divfunc):
             divfunc(pState, d1State, d2State)
+            
+    #from WPJS -AY
+    def kill(self, state):
+        # Call the module's optional kill function
+        divfunc = getattr(self.module, "kill", None)
+        if callable(divfunc):
+            divfunc(state)
 
 
