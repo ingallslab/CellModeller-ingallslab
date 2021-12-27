@@ -540,7 +540,7 @@ __kernel void find_contacts(const int max_cells,
                             __global float4* norms,
                             __global float* reldists,
                             __global float* stiff,
-                            __global float* overlap
+                            __global float* overlap,
                             __global const int* isDeleted) //Added isDeleted from WPJS
 {
   // our id

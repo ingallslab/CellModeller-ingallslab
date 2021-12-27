@@ -167,8 +167,8 @@ class CLBacterium:
         
     #From WPJS -AY
     def delete(self, state):
-		self.delete_cell(state.idx)
-		self.deleteCellState(state)		# currently this does nothing - is it necessary?
+        self.delete_cell(state.idx)
+        self.deleteCellState(state)		# currently this does nothing - is it necessary?
 
     def init_cl(self):
         if self.simulator:
@@ -332,9 +332,8 @@ class CLBacterium:
         self.rhs_dev = cl_array.zeros(self.queue, cell_geom, vec.float8)
         
         # cell removal (WPJS) -AY
-		self.isDeleted = numpy.zeros(cell_geom, numpy.int32)
-		self.isDeleted_dev = cl_array.zeros(self.queue, cell_geom, numpy.int32)
-    
+        self.isDeleted = numpy.zeros(cell_geom, numpy.int32)
+        self.isDeleted_dev = cl_array.zeros(self.queue, cell_geom, numpy.int32)    
 
     def load_from_cellstates(self, cell_states):
         for (cid,cs) in list(cell_states.items()):
@@ -653,8 +652,8 @@ class CLBacterium:
         
     #From WPJS, but it doesn't do anything... -AY
     def deleteCellState(self, state):
-		pass
-
+        pass
+		
     def initCellState(self, state):
         cid = state.id
         i = state.idx
@@ -819,8 +818,7 @@ class CLBacterium:
                                          self.ct_pts_dev.data,
                                          self.ct_norms_dev.data,
                                          self.ct_reldists_dev.data,
-                                         self.ct_stiff_dev.data,
-                                         self.isDeleted_dev.data).wait() #Added isDeleted_dev from WPJS -AY
+                                         self.ct_stiff_dev.data).wait()
 
         self.program.find_sphere_contacts(self.queue,
                                          (self.n_cells,),
@@ -871,7 +869,8 @@ class CLBacterium:
                                    self.ct_norms_dev.data,
                                    self.ct_reldists_dev.data,
                                    self.ct_stiff_dev.data,
-                                   self.ct_overlap_dev.data).wait()
+                                   self.ct_overlap_dev.data,
+                                   self.isDeleted_dev.data).wait() #Added isDeleted_dev from WPJS -AY
 
         # set dtype to int32 so we don't overflow the int32 when summing
         #self.n_cts = self.cell_n_cts_dev.get().sum(dtype=numpy.int32)
@@ -1200,35 +1199,35 @@ class CLBacterium:
         
     #From WPJS -AY
     def delete_cell(self, i):
-		"""Remove cell with idx = i from the mechanics algorithm."""
-		# at the moment, this just means hiding it from the contact finder...
-		self.isDeleted[i] = 1
-		self.isDeleted_dev.set(self.isDeleted)
-		
-		# delete this cell's entries in contact lists
-		# self.ct_tos =
-		# here's how find_contacts does this for // contacts 
-		#self.ct_reldists_dev[i] = 0.0;		
-		#self.ct_stiff_dev[i] = 0.0;   #nope - shouldn't be 0!
+        """Remove cell with idx = i from the mechanics algorithm."""
+        # at the moment, this just means hiding it from the contact finder...
+        self.isDeleted[i] = 1
+        self.isDeleted_dev.set(self.isDeleted)
+	    
+	    # delete this cell's entries in contact lists
+	    # self.ct_tos =
+	    # here's how find_contacts does this for // contacts 
+	    #self.ct_reldists_dev[i] = 0.0;		
+	    #self.ct_stiff_dev[i] = 0.0;   #nope - shouldn't be 0!
 
              
-		"""
-		ct_geom = (self.max_cells, self.max_contacts)
-		self.ct_tos =
-		self.ct_tos_dev = 
-		self.ct_dists =
-		self.ct_dists_dev = 
-		self.ct_pts = numpy.zeros(ct_geom, vec.float4)
-		self.ct_pts_dev = cl_array.zeros(self.queue, ct_geom, vec.float4)
-		self.ct_norms = numpy.zeros(ct_geom, vec.float4)
-		self.ct_norms_dev = cl_array.zeros(self.queue, ct_geom, vec.float4)
-		self.ct_stiff_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
-		# where the contacts pointing to this cell are collected
-		self.cell_tos = numpy.zeros(ct_geom, numpy.int32)
-		self.cell_tos_dev = cl_array.zeros(self.queue, ct_geom, numpy.int32)
-		self.n_cell_tos = numpy.zeros(cell_geom, numpy.int32)
-		self.n_cell_tos_dev = cl_array.zeros(self.queue, cell_geom, numpy.int32)
-		"""
+        """
+	    ct_geom = (self.max_cells, self.max_contacts)
+        self.ct_tos =
+        self.ct_tos_dev = 
+        self.ct_dists =
+        self.ct_dists_dev = 
+        self.ct_pts = numpy.zeros(ct_geom, vec.float4)
+        self.ct_pts_dev = cl_array.zeros(self.queue, ct_geom, vec.float4)
+        self.ct_norms = numpy.zeros(ct_geom, vec.float4)
+        self.ct_norms_dev = cl_array.zeros(self.queue, ct_geom, vec.float4)
+        self.ct_stiff_dev = cl_array.zeros(self.queue, ct_geom, numpy.float32)
+        # where the contacts pointing to this cell are collected
+        self.cell_tos = numpy.zeros(ct_geom, numpy.int32)
+        self.cell_tos_dev = cl_array.zeros(self.queue, ct_geom, numpy.int32)
+        self.n_cell_tos = numpy.zeros(cell_geom, numpy.int32)
+        self.n_cell_tos_dev = cl_array.zeros(self.queue, cell_geom, numpy.int32)
+        """
 
 
     def calc_cell_geom(self):

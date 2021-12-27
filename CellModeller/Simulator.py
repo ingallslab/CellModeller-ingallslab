@@ -377,10 +377,11 @@ visualised.
             
             #From WPJS -AY
             if state.deathFlag:			# priority 1: death
-		   	  self.kill(state)
-		   	  
+                self.kill(state)
+				   	  
             if state.divideFlag:
                 self.divide(state) #neighbours no longer current
+                
             self.phys.set_cells()
             
             '''
