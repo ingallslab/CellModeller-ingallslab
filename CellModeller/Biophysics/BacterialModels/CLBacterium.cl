@@ -561,6 +561,10 @@ __kernel void find_contacts(const int max_cells,
   // loop through our square and the eight squares surrounding it
   // (fewer squares if we're on an edge)
   for (int row = max(0, sq_row-1); row < min((int)(sq_row+2), grid_y_range); row++) {
+  
+        // Is this is the earliest we can use the continue statement? WPJS
+        if (status_i==1) continue;
+        
     for (int col = max(0, sq_col-1); col < min((int)(sq_col+2), grid_x_range); col++) {
 
       // what square is this?
@@ -697,6 +701,8 @@ __kernel void find_contacts(const int max_cells,
     }
   }
   n_cts[i] = k;
+  
+  if (status_i==1) n_cts[i] = 0; // zero out contacts of deleted cells to speed up simulation -AY
 
   // zero out unused contacts
   // this IS necessary for calculate_Mx to work
