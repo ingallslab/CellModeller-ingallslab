@@ -61,8 +61,15 @@ class ModuleRegulator:
     #from WPJS -AY
     def kill(self, state):
         # Call the module's optional kill function
-        divfunc = getattr(self.module, "kill", None)
-        if callable(divfunc):
-            divfunc(state)
+        killfunc = getattr(self.module, "kill", None)
+        if callable(killfunc):
+            killfunc(state)
+     
+    #Solves species transport w/ Dolfin and grows cells according to model specified -AY
+    def solvePDEandGrowth(self):
+        # Call the module's optional kill function
+        solverFunc = getattr(self.module, "solvePDEandGrowth", None)
+        if callable(solverFunc):
+            solverFunc(self.sim,self.cellStates)
 
 

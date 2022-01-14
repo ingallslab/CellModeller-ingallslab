@@ -26,6 +26,12 @@ function setup(Simulator, Gui) that constructs the requiredx modules
 can also create Renderers and add them by calling
 Simulator.addRenderer(renderer) so that the simulation can be
 visualised.
+
+Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions in here, so make sure:
+    1. The PDESolver file is named "yourModule_DolfinPDESolver.py"
+    2. The PDESolver file is located in the same directory as yourModule.py
+    3. The solver class in the PDESolver file is named "DolfinSolver"
+TODO: include a try/except clause to still allow vanilla CM simulations
 """
 
     ## Construct an empty simulator object. This object will not be able to
@@ -95,7 +101,23 @@ visualised.
                 importlib.reload(self.module)
             else:
                 self.module = __import__(self.moduleName, globals(), locals(), [], 0)
-            
+        #Try adding dolfinPDESolver module from the same directory
+        pdeModuleName = self.moduleName + '_DolfinPDESolver' # make sure to stick to this naming convention when making the PDESolver files
+        self.pdeModule = __import__(pdeModuleName, globals(), locals(), [], 0)
+        
+        #TODO: have a try/except clause in case the simulation doesn't use a DolfinPDESolver
+        '''
+        #Code in this block doesn't work
+        try:
+            if pdeModuleName in sys.modules:
+                self.pdeModule = sys.modules[pdeModuleName]
+                importlib.reload(self.pdeModule)
+            else:
+                self.pdeModule = __import__(pdeModuleName, globals(), locals(), [], 0)
+        except:
+            print("No Dolfin solver found for this simulation")
+            pass
+        '''
 
         # TJR: What is this invar thing? I have never seen this used...
         #setup the simulation here:
@@ -171,8 +193,10 @@ visualised.
     # 'reg' = regulatory model of biochemical circuit in the cell
     # 'sig' = signaling model of intercellular chemical reaction diffusion.
     # 'integ' = integrator
+    # 'solverParams' = FEniCS solver parameters
 
-    def init(self, phys, reg, sig, integ):
+    #Updated to be interfaced with FEniCS
+    def init(self, phys, reg, sig, integ, solverParams=None):
         self.phys = phys
         self.reg = reg
         self.sig = sig
@@ -190,8 +214,13 @@ visualised.
             self.sig.setRegulator(reg)
             self.integ.setSignalling(sig)
             self.reg.setSignalling(sig)
-
-
+            
+        if solverParams:
+            print('Adding Dolfin solver object...')
+            self.solver = self.pdeModule.DolfinSolver(solverParams)
+        else:
+            self.solver = None
+            
     ## Set up the OpenCL contex, the configuration is set up the first time, and is saved in the config file
     def init_cl(self, platnum, devnum):
         # Check that specified platform exists
@@ -332,7 +361,7 @@ visualised.
    	   
    	   # delete all instance of cell at cellState level
    	   cid = state.id
-   	   #print 'Removing cell with id %i' % cid
+   	   #print('Removing cell with id %i' % cid)
    	   del self.cellStates[cid]
 
     ## Add a new cell to the simulator
@@ -370,7 +399,7 @@ visualised.
     ## Proceed to the next simulation step
     # This method is where objects phys, reg, sig and integ are called
     def step(self):
-        self.reg.step(self.dt)
+        self.reg.step(self.dt) #calls user-defined update function in CM module
         states = dict(self.cellStates)
         for (cid,state) in list(states.items()):
             state.time = self.stepNum * self.dt
@@ -383,19 +412,16 @@ visualised.
                 self.divide(state) #neighbours no longer current
                 
             self.phys.set_cells()
-            
-            '''
-            #Added by -AY to remove cells
-            if state.removeFlag:
-                self.removeCell(state)
-            '''
-            
+                        
         while not self.phys.step(self.dt): #neighbours are current here
             pass
         if self.sig:
             self.sig.step(self.dt)
         if self.integ:
             self.integ.step(self.dt)
+        
+        if self.solver:
+            self.reg.solvePDEandGrowth()
 
         if self.saveOutput and self.stepNum%self.pickleSteps==0:
             self.writePickle()
