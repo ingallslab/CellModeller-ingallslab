@@ -103,21 +103,12 @@ TODO: include a try/except clause to still allow vanilla CM simulations
                 self.module = __import__(self.moduleName, globals(), locals(), [], 0)
         #Try adding dolfinPDESolver module from the same directory
         pdeModuleName = self.moduleName + '_DolfinPDESolver' # make sure to stick to this naming convention when making the PDESolver files
-        self.pdeModule = __import__(pdeModuleName, globals(), locals(), [], 0)
         
-        #TODO: have a try/except clause in case the simulation doesn't use a DolfinPDESolver
-        '''
-        #Code in this block doesn't work
         try:
-            if pdeModuleName in sys.modules:
-                self.pdeModule = sys.modules[pdeModuleName]
-                importlib.reload(self.pdeModule)
-            else:
-                self.pdeModule = __import__(pdeModuleName, globals(), locals(), [], 0)
+            self.pdeModule = __import__(pdeModuleName, globals(), locals(), [], 0)
         except:
-            print("No Dolfin solver found for this simulation")
+            print("No Dolfin solver for this simulation")
             pass
-        '''
 
         # TJR: What is this invar thing? I have never seen this used...
         #setup the simulation here:
