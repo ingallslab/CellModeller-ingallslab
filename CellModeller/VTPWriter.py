@@ -101,10 +101,13 @@ class Capsule:
         dcm[2][2] = numpy.power(qin[0],2) - numpy.power(qin[1],2) - numpy.power(qin[2],2) + numpy.power(qin[3],2)
         
         return numpy.dot(dcm,r.T).T
-        
-        
-class CapsuleWriter:
 
+
+class CapsuleWriter:
+    '''
+    Currently only exports growthRate*100. 
+    TODO: find a way to export multiple bacteria properties
+    '''        
 
     def __init__(self, n, file):
         self.cap = Capsule(n)
@@ -115,11 +118,21 @@ class CapsuleWriter:
     def init_data(self):
     
         # Setup points, vertices and any additional cell data
+        
+        # TODO: Be able to access all exported values in paraview.
+        
         self.Points = vtk.vtkPoints()
         self.Triangles = vtk.vtkCellArray()
         self.CellData = vtk.vtkUnsignedCharArray()
-        self.CellData.SetNumberOfComponents(3); # number of attributes a bacteria has
-        self.CellData.SetName("CellData");
+        self.CellData.SetNumberOfComponents(1); # number of attributes a bacteria has
+        self.CellData.SetName("GrowthRate");
+        
+        '''
+        self.CellType = vtk.vtkUnsignedCharArray()
+        self.CellType.SetNumberOfComponents(1); # number of attributes a bacteria has
+        self.CellType.SetName("CellType");
+        '''
+        
         self.gap = 0
         
         
@@ -129,18 +142,15 @@ class CapsuleWriter:
         for cs in iter(cellStates.values()):
             cloud = self.cap.Transform(cs.length, cs.radius, cs.pos, cs.dir)
             self.writeCapsule(cloud, cs.cellType, cs.growthRate, cs.deathFlag)
-
+  
         # Create a polydata object
         trianglePolyData = vtk.vtkPolyData()
 
         # Add the geometry and topology to the polydata
         trianglePolyData.SetPoints(self.Points)
+        #trianglePolyData.GetPointData().SetScalars(self.CellType)
         trianglePolyData.GetPointData().SetScalars(self.CellData)
         trianglePolyData.SetPolys(self.Triangles)
-
-        # Clean the polydata so that the edges are shared. Is this needed?
-        #cleanPolyData = vtk.vtkCleanPolyData()
-        #cleanPolyData.SetInput(trianglePolyData)
         
         trianglePolyData.Modified()
 
@@ -160,12 +170,12 @@ class CapsuleWriter:
     def writeCapsule(self,cloud,cellType,growthRate,deathFlag):
        
         gap = self.gap
-        tup = (cellType,growthRate,deathFlag)
             
         for point in cloud:
                
             self.Points.InsertNextPoint(point[0],point[1],point[2]) 
-            self.CellData.InsertNextTuple([cellType,growthRate,deathFlag]) # -AY
+            #self.CellType.InsertNextTuple([cellType,]) # -AY
+            self.CellData.InsertNextTuple([int(growthRate*100),]) # -AY, only works with ints. TODO: Find a way to display floats.
             
         for simplex in self.cap.tris:
             tri = vtk.vtkTriangle()
