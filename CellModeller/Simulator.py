@@ -31,7 +31,7 @@ Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions
     1. The PDESolver file is named "yourModule_DolfinPDESolver.py"
     2. The PDESolver file is located in the same directory as yourModule.py
     3. The solver class in the PDESolver file is named "DolfinSolver"
-TODO: include a try/except clause to still allow vanilla CM simulations
+The DolfinSolver is called from 
 """
 
     ## Construct an empty simulator object. This object will not be able to
@@ -81,6 +81,7 @@ TODO: include a try/except clause to still allow vanilla CM simulations
         # Two ways to specify a module (model):
         self.moduleName = moduleName # Import via standard python
         self.moduleStr = moduleStr # Import stored python code string (from a pickle usually)
+
         if self.moduleStr:
             print("Importing model %s from string"%(self.moduleName))
             self.module = imp.new_module(moduleName)
@@ -88,7 +89,8 @@ TODO: include a try/except clause to still allow vanilla CM simulations
         else:
             # In case the moduleName is a path to a python file:
             # Get path and file name
-            (path,name) = os.path.split(self.moduleName)
+            (path,name) = os.path.split(self.moduleName) #path = blank; name = module (without the .py)
+
             # Append path to PYTHONPATH, if no path do nothing
             if path:
                 if path not in sys.path:
@@ -101,13 +103,15 @@ TODO: include a try/except clause to still allow vanilla CM simulations
                 importlib.reload(self.module)
             else:
                 self.module = __import__(self.moduleName, globals(), locals(), [], 0)
-        #Try adding dolfinPDESolver module from the same directory
-        pdeModuleName = self.moduleName + '_DolfinPDESolver' # make sure to stick to this naming convention when making the PDESolver files
+
+        # Optional import of PDEDolfinSolver
+        self.pdeModuleName = self.moduleName + '_DolfinPDESolver' # make sure to use this naming convention when making the PDESolver files
         
         try:
-            self.pdeModule = __import__(pdeModuleName, globals(), locals(), [], 0)
+            self.pdeModule = __import__(self.pdeModuleName, globals(), locals(), [], 0)
+            print("Importing DolfinPDESolver %s"%self.pdeModuleName)
         except:
-            print("No Dolfin solver for this simulation")
+            print("No Dolfin solver found")
             pass
 
         # TJR: What is this invar thing? I have never seen this used...
@@ -166,8 +170,7 @@ TODO: include a try/except clause to still allow vanilla CM simulations
 
     ## Get the index (into flat arrays) of the next cell to be created
     def next_idx(self):
-        idx = self._next_idx #If I replace this with line below, it works, but cell types and identities get messed up.
-        #idx = self.phys.n_cells #For simulations that require removing cells at boundaries -AY
+        idx = self._next_idx
         self._next_idx += 1
         return idx
 
@@ -207,7 +210,6 @@ TODO: include a try/except clause to still allow vanilla CM simulations
             self.reg.setSignalling(sig)
             
         if solverParams:
-            print('Adding Dolfin solver object...')
             self.solver = self.pdeModule.DolfinSolver(solverParams)
         else:
             self.solver = None
@@ -352,7 +354,7 @@ TODO: include a try/except clause to still allow vanilla CM simulations
    	   
    	   # delete all instance of cell at cellState level
    	   cid = state.id
-   	   #print('Removing cell with id %i' % cid)
+   	   #print('Removing cell with id %i' % state.id)
    	   del self.cellStates[cid]
 
     ## Add a new cell to the simulator
@@ -372,13 +374,7 @@ TODO: include a try/except clause to still allow vanilla CM simulations
         if self.sig:
             self.sig.addCell(cs)
         self.phys.addCell(cs, **kwargs)
-    
-    '''
-    # Added by AY; currently only removes cells from biophysics, need to add removal from integ and sig (nCells -= 1)
-    def removeCell(self,state):
-        self.phys.removeCell(state)
-    '''
-        
+           
     #---
     # Some functions to modify existing cells (e.g. from GUI)
     # Eventually prob better to have a generic editCell() that deals with this stuff
@@ -387,8 +383,9 @@ TODO: include a try/except clause to still allow vanilla CM simulations
         if cid in self.cellStates:
             self.phys.moveCell(self.cellStates[cid], delta_pos)
 
-    ## Proceed to the next simulation step
-    # This method is where objects phys, reg, sig and integ are called
+    # Proceed to the next simulation step
+    # This method is where objects phys, reg, sig and integ are called.
+    # It is the simulator's main loop
     def step(self):
         self.reg.step(self.dt) #calls user-defined update function in CM module
         states = dict(self.cellStates)
@@ -410,10 +407,10 @@ TODO: include a try/except clause to still allow vanilla CM simulations
             self.sig.step(self.dt)
         if self.integ:
             self.integ.step(self.dt)
-        
+            
         if self.solver:
             self.reg.solvePDEandGrowth()
-
+       
         if self.saveOutput and self.stepNum%self.pickleSteps==0:
             self.writePickle()
 
