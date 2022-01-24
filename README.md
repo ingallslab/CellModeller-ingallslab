@@ -10,7 +10,7 @@ This fork of CellModeller can simulate growth in microfluidic traps. This is per
 
 Cell removal is handled by deleting the cell id from sim.CellStates and excluding these cells from the biophysics handling. See [this tutorial](Examples/AaronYip/cell_removal).
 
-Scalar fields are handled by [FEniCS](https://fenicsproject.org/) 2019.1.0, an open-source PDE solver. The CellModeller engine and FEniCS solver are fully coupled. Please download FEniCS from their website.
+Scalar fields are handled by [FEniCS](https://fenicsproject.org/) 2019.1.0, an open-source PDE solver. The CellModeller engine and FEniCS solver are fully coupled. Please download FEniCS from their website. Try running [this tutorial](Examples/AaronYip/monod_growth_1open).
 
 Cells and fields can be visualized simultaneously in [Paraview](https://www.paraview.org/) by converting .pickle files to .vtp format. Some parts of this are still in progress.
 
