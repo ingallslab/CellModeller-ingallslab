@@ -9,6 +9,9 @@
 
     Created 16. 03. 15 
     W. P. J. Smith
+    
+    Updated Jan 2022 for use with python3
+    A. Yip
 """
 
 import os
