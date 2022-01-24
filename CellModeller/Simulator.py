@@ -31,7 +31,6 @@ Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions
     1. The PDESolver file is named "yourModule_DolfinPDESolver.py"
     2. The PDESolver file is located in the same directory as yourModule.py
     3. The solver class in the PDESolver file is named "DolfinSolver"
-The DolfinSolver is called from 
 """
 
     ## Construct an empty simulator object. This object will not be able to

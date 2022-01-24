@@ -540,6 +540,9 @@ class CLBacterium:
                 self.updateCellState(state)
 
     def progress_init(self, dt):
+        '''
+        Initializes n_ticks and progress
+        '''
         self.set_cells()
         # NOTE: by default self.dt=None, and time step == simulator time step (dt) 
         if self.dt:
@@ -559,6 +562,9 @@ class CLBacterium:
             return True
 
     def progress_finalise(self):
+        '''
+        Move forward to next time step
+        '''
         self.frame_no += 1
         self.progress_initialised = False
         self.seconds_elapsed = numpy.float32(time.time() - self.time_begin)
@@ -665,6 +671,7 @@ class CLBacterium:
         state.oldLen = self.cell_lens[i]
         
         state.volume = state.length # TO DO: do something better here
+        #state.volume = state.length*2.0*state.radius + 3.141592**state.radius # Originally state.length; now it is area -AY
         pa = numpy.array(state.pos)
         da = numpy.array(state.dir)
         state.ends = (pa-da*state.length*0.5, pa+da*state.length*0.5)
@@ -708,8 +715,9 @@ class CLBacterium:
                 if self.neighbours[i,n] not in state.neighbours:
                     state.neighbours.append(self.neighbours[i,n]) #ids of all cells in physical contact
         state.cts = len(state.neighbours)
-
-        state.volume = state.length # TO DO: do something better here
+        
+        state.volume = state.length #TO DO: do something better here
+        #state.volume = state.length*2.0*state.radius + 3.141592**state.radius # Originally state.length -AY
         pa = numpy.array(state.pos)
         da = numpy.array(state.dir)
         state.ends = (pa-da*state.length*0.5, pa+da*state.length*0.5)

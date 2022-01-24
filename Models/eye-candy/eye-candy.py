@@ -47,9 +47,6 @@ def init(cell):
     cell.growthRate = cell_growr[cell.cellType]
     cell.color = cell_cols[cell.cellType]
 
-'''
-cells = sim.cellStates
-'''
 def update(cells):
     #Iterate through each cell and flag cells that reach target size for division
     for (id, cell) in cells.items():

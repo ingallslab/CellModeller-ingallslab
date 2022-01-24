@@ -212,7 +212,7 @@ def main():
         '''(w,h) = pdf.computeBox()
         sqrt2 = math.sqrt(2)
         world = (w/sqrt2,h/sqrt2)'''
-        world = (150,150)
+        world = (200,200)
 
         # Page setup
         page = (20,20)
