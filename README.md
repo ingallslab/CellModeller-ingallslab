@@ -2,11 +2,11 @@ CellModeller4
 =============
 Multicellular modelling framework, created by Tim Rudge, PJ Steiner, and Jim Haseloff, University of Cambridge
 
-##Updates to default version:
+## Updates:
 This fork of CellModeller can simulate growth in microfluidic traps. This is permitted by the following functionalities:
 
--Cell removal from the simulation
--PDE solver with user-defined boundary conditions
+- Cell removal from the simulation
+- PDE solver with user-defined boundary conditions
 
 Cell removal is handled by deleting the cell id from sim.CellStates and excluding these cells from the biophysics handling. See [this tutorial](Examples/AaronYip/cell_removal).
 
