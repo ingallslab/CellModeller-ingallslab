@@ -137,9 +137,13 @@ Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions
         startTime = time.localtime()
         outputFileRoot = self.outputDirName if self.outputDirName else self.moduleName + '-' + time.strftime('%y-%m-%d-%H-%M', startTime)
         self.outputDirPath = os.path.join('data', outputFileRoot)
+        
+        # Commented out to allow exporting to current directory of simulation
+        '''
         if 'CMPATH' in os.environ:
             self.outputDirPath = os.path.join(os.environ["CMPATH"], self.outputDirPath)
-
+        '''          
+        
         # Add a number to end of dir name if it already exists 
         label = 2
         while os.path.exists(self.outputDirPath):
@@ -148,7 +152,7 @@ Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions
             else:
                 self.outputDirPath = self.outputDirPath+"_"+str(label)
             label+=1
-        os.mkdir(self.outputDirPath)
+        os.makedirs(self.outputDirPath)
 
         # write a copy of the model into the dir (for reference), 
         # this goes in the pickle too (and gets loaded when a pickle is loaded)
