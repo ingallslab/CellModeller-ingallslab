@@ -45,7 +45,8 @@ Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions
                     saveOutput=False, \
                     clPlatformNum=0, \
                     clDeviceNum=0, \
-                    is_gui=False):
+                    is_gui=False,
+                    psweep=False):
         # Is this simulator running in a gui?
         self.is_gui = is_gui
 
@@ -68,6 +69,9 @@ Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions
 
         # Time step
         self.dt = dt
+        
+        # Parametric sweep
+        self.psweep = psweep
 
         if "CMPATH" in os.environ:
             self.cfg_file = os.path.join(os.environ["CMPATH"], 'CMconfig.cfg')
@@ -136,7 +140,10 @@ Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions
         import time
         startTime = time.localtime()
         outputFileRoot = self.outputDirName if self.outputDirName else self.moduleName + '-' + time.strftime('%y-%m-%d-%H-%M', startTime)
-        self.outputDirPath = os.path.join('data', outputFileRoot)
+        if self.psweep:
+            self.outputDirPath = outputFileRoot
+        else:
+            self.outputDirPath = os.path.join('data', outputFileRoot)
         
         # Commented out to allow exporting to current directory of simulation
         '''
@@ -162,8 +169,7 @@ Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions
             self.moduleOutput = inspect.getsource(self.module)
         open(os.path.join(self.outputDirPath, self.moduleName), 'w').write(self.moduleOutput)
 
-        self.dataOutputInitialised=True
-
+        self.dataOutputInitialised = True
 
     ## Get an id for the next cell to be created
     def next_id(self):
