@@ -118,15 +118,12 @@ class CapsuleWriter:
     def init_data(self):
     
         # Setup points, vertices and any additional cell data
-        
-        # TODO: Be able to access all exported values in paraview.
-        
+               
         self.Points = vtk.vtkPoints()
         self.Triangles = vtk.vtkCellArray()
         self.CellData = vtk.vtkUnsignedCharArray()
-        self.CellData.SetNumberOfComponents(1); # number of attributes a bacteria has
-        self.CellData.SetName("GrowthRate");
-        
+        self.CellData.SetNumberOfComponents(2); # number of attributes a bacteria has, will be displayed as "X, Y"
+        self.CellData.SetName("CellData");
         '''
         self.CellType = vtk.vtkUnsignedCharArray()
         self.CellType.SetNumberOfComponents(1); # number of attributes a bacteria has
@@ -148,8 +145,7 @@ class CapsuleWriter:
 
         # Add the geometry and topology to the polydata
         trianglePolyData.SetPoints(self.Points)
-        #trianglePolyData.GetPointData().SetScalars(self.CellType)
-        trianglePolyData.GetPointData().SetScalars(self.CellData)
+        trianglePolyData.GetPointData().AddArray(self.CellData)
         trianglePolyData.SetPolys(self.Triangles)
         
         trianglePolyData.Modified()
@@ -174,8 +170,7 @@ class CapsuleWriter:
         for point in cloud:
                
             self.Points.InsertNextPoint(point[0],point[1],point[2]) 
-            #self.CellType.InsertNextTuple([cellType,]) # -AY
-            self.CellData.InsertNextTuple([int(growthRate*100),]) # -AY, only works with ints. TODO: Find a way to display floats.
+            self.CellData.InsertNextTuple([int(growthRate*100),cellType]) # -AY, only works with ints. TODO: Find a way to display floats.
             
         for simplex in self.cap.tris:
             tri = vtk.vtkTriangle()
