@@ -31,6 +31,9 @@ Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions
     1. The PDESolver file is named "yourModule_DolfinPDESolver.py"
     2. The PDESolver file is located in the same directory as yourModule.py
     3. The solver class in the PDESolver file is named "DolfinSolver"
+    
+If running a parametric sweep with psweep or pyabc, parameters must be inputted as a dictionary {'x': ..., 'y': ...}
+A function called setparams must be included in the module file, and the parameters must be defined as global variables in the module.
 """
 
     ## Construct an empty simulator object. This object will not be able to
@@ -45,8 +48,9 @@ Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions
                     saveOutput=False, \
                     clPlatformNum=0, \
                     clDeviceNum=0, \
-                    is_gui=False,
-                    psweep=False):
+                    is_gui=False, \
+                    psweep=False, \
+                    params={}):
         # Is this simulator running in a gui?
         self.is_gui = is_gui
 
@@ -72,6 +76,7 @@ Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions
         
         # Parametric sweep
         self.psweep = psweep
+        self.params = params
 
         if "CMPATH" in os.environ:
             self.cfg_file = os.path.join(os.environ["CMPATH"], 'CMconfig.cfg')
@@ -130,6 +135,10 @@ Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions
         
         # Call the user-defined setup function on ourself
         self.module.setup(self)
+        
+        # Set model parameters if doing a parametric sweep
+        if self.psweep == True:
+            self.module.setparams(params)
 
     def setSaveOutput(self, save):
         self.saveOutput = save
@@ -170,7 +179,11 @@ Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions
         open(os.path.join(self.outputDirPath, self.moduleName), 'w').write(self.moduleOutput)
 
         self.dataOutputInitialised = True
-
+        
+        # Save parameters to txt in psweep in case sims don't finish
+        if self.psweep:
+            open(os.path.join(self.outputDirPath, 'params.txt'), 'w').write(str(self.params))
+   
     ## Get an id for the next cell to be created
     def next_id(self):
         id = self._next_id
