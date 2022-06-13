@@ -18,7 +18,7 @@ import os
 import math
 import numpy as np
 import pickle
-from helperFunctions import create_pickle_list
+from helperFunctions import create_pickle_list, get_max_cell_type, load_cellStates, read_time_step
 import csv
 import re
 import pandas as pd
@@ -44,22 +44,16 @@ def main(file_dir_path = ''):
         run_population_counts_and_write_to_csv(file_dir_path, pickle_list, output_file)
 
 
-def count_cell_types(file_dir_path, pickle_file_name, max_cell_type = max_cell_type_default):   
+def count_cell_types(cells, max_cell_type = max_cell_type_default):   
     """
     Counts the total number of each cellType at a given time step.
-    @param  file_dir_path       String containing the full path to the directory containing the .pickle files 
-    @param  pickle_file_name    String containing the name of the a specific .pickle file
-    @param  max_cell_type       int specifying the largest cellType index in the experiment
+    @param  cells           cellStates dict    
+    @param  max_cell_type   int specifying the largest cellType index in the experiment
     
-    @return populations         nparray with the total population for each cellType
+    @return populations     nparray with the total population for each cellType
     """
-    
-    # Read in file
-    pickle_full_path = os.path.join(file_dir_path, pickle_file_name)
-    data = pickle.load(open(pickle_full_path, 'rb'))
-    
+       
     # Initializations
-    cells = data['cellStates']
     populations = np.zeros((max_cell_type + 1,), dtype = int)
     
     # Iterate through cellStates DataFrame and add to the populations array based on cellType
@@ -94,9 +88,9 @@ def run_population_counts_and_write_to_csv(file_dir_path, pickle_list, output_fi
         #Write row of data for each time step
         for file in pickle_list:
             print('Writing : ', file)
-            match = re.search('step-(\d+)', file, re.IGNORECASE)
-            step = int(match.group(1))
-            populations = count_cell_types(file_dir_path, file, max_cell_type)
+            step = read_time_step(file)
+            cells = load_cellStates(file_dir_path, file)
+            populations = count_cell_types(cells, max_cell_type)
             writer.writerow(np.concatenate((step,populations), axis = None))
 
 def count_final_populations(population_csv):
