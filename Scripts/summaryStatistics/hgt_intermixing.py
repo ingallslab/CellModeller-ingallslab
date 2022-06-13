@@ -52,7 +52,7 @@ def main(file_dir_path=''):
             
             # Generate network
             G = generate_network(cells)
-            G = adjust_cell_types(G, recip_types=[1], trans_types = [2])
+            G = adjust_cell_types(G, recip_types=[0], trans_types=[2])
             
             # Extra calculations
             n_cells = nx.number_of_nodes(G)
