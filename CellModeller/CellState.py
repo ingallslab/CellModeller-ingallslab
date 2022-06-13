@@ -12,3 +12,5 @@ class CellState:
         self.neighbours = []
         self.effGrowth = 0.0
         self.deathFlag = False
+        self.hgt_events = 0
+        #self.antibiotic_tick = 0
