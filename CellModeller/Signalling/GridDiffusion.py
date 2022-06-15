@@ -16,7 +16,7 @@ level array.
     Other transport models can be implemented by replacing the rates() function with
 something else - e.g. a bulk flow term.
 """
-    def __init__(self, sim, nSignals, gridDim, gridSize, gridOrig, D, adv=None, initLevels=None, regul=None):
+    def __init__(self, sim, nSignals, gridDim, gridSize, gridOrig, D, adv=None, rxn=None, K=[0], initLevels=None, regul=None): #Added rxn and k -AY
         # Data organisation
         self.gridDim = (nSignals,) + gridDim
         self.gridDataLen = reduce(lambda x, y: x * y, self.gridDim)
@@ -29,6 +29,7 @@ something else - e.g. a bulk flow term.
         h = gridSize[0]
         self.diffRates = [d/(h**2) for d in D]
         self.advRates = [a/h for a in adv] if adv else None
+        self.rxnRates = [k for k in K] if rxn else None #-AY
         self.nSignals = nSignals
 
         # Initial signal level - homogeneous distribution
@@ -111,6 +112,10 @@ something else - e.g. a bulk flow term.
                 # Use edge case from boundary conditions for diffusion
                 signalRatesView[s] += laplace(signalLevelsView[s], None, mode=boundcond, cval=boundval) * \
                                                                                     self.diffRates[s] / 6.0
+            elif self.rxnRates:
+                signalRatesView[s] = laplace(signalLevelsView[s], None, mode=boundcond, cval=boundval) \
+                                                                                   * self.diffRates[s] / 6.0 + \
+                                                                                   signalLevelsView[s]*self.rxnRates[s]
             else:
                 signalRatesView[s] = laplace(signalLevelsView[s], None, mode=boundcond, cval=boundval) \
                                                                                    * self.diffRates[s] / 6.0
