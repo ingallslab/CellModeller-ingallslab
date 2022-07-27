@@ -2,7 +2,7 @@ CellModeller4
 =============
 Multicellular modelling framework, created by Tim Rudge, PJ Steiner, and Jim Haseloff, University of Cambridge
 
-## Updates:
+## Microfluidic Environments
 This fork of CellModeller can simulate growth in microfluidic traps. This is permitted by the following functionalities:
 
 - Cell removal from the simulation
@@ -17,3 +17,19 @@ Cells and fields can be visualized simultaneously in [Paraview](https://www.para
 All the above updates are based on the work of @WilliamPJSmith.
 
 /!\ Simulations interfaced with FEniCS cannot be run in the GUI.
+
+## Approximate Bayesian Computation
+This fork is interfaced to work with [pyabc](https://pyabc.readthedocs.io/en/latest/). See [this tutorial](Examples/AaronYip/pyabc_cellmodeller) for a minimal example. 
+
+To setup a calibration, setup the setparams function like so in the CellModeller module file:
+
+```
+def setparams(param_dict):
+    global your_parameter
+    your_parameter = param_dict['your_parameter']
+```
+
+This defines which parameters will be calibrated. Afterwards, setup the the [ABC simulation script](Examples/AaronYip/pyabc_cellmodeller/pyabc_cellmodeller.py) in a similar fashion to the tutorials in the [pyabc documentation](https://pyabc.readthedocs.io/en/latest/examples/parameter_inference.html)
+
+## Degradation of Extracellular Molecules
+A term for reaction has been added to the [Signalling module](https://github.com/cheekolegend/CellModeller/blob/master/CellModeller/Signalling/GridDiffusion.py).
