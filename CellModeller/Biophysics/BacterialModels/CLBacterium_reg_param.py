@@ -672,13 +672,14 @@ class CLBacterium_reg_param:
         state.length = self.cell_lens[i]
         #for effective growth calulations
         state.oldLen = self.cell_lens[i]
-        
+    
         state.volume = state.length # TO DO: do something better here
         #state.volume = state.length*2.0*state.radius + 3.141592**state.radius # Originally state.length; now it is area -AY
         pa = numpy.array(state.pos)
         da = numpy.array(state.dir)
         state.ends = (pa-da*state.length*0.5, pa+da*state.length*0.5)
         state.strainRate = 0.0
+        state.strainRate_list = [] # Moving average for strain rate -AY
         #self.cell_dlens[i] = state.growthRate
         state.startVol = state.volume
 
@@ -705,6 +706,18 @@ class CLBacterium_reg_param:
         state.radius = self.cell_rads[i]
         state.length = self.cell_lens[i]
         state.strainRate = (state.length - state.oldLen)/state.oldLen
+                      
+        # Calculate rolling average
+        window_size = 5 # time steps
+        if state.cellAge > 0:
+            state.strainRate_list.append(state.strainRate)
+        if len(state.strainRate_list) > window_size:
+            state.strainRate_list.pop(0) # remove first element
+        state.strainRate_rolling = numpy.mean(state.strainRate_list)
+        
+        # Calculate rolling average --- catch bugs
+        if state.strainRate_rolling == 'nan':
+            state.strainRate_rolling == state.strainRate
 
         #currently the effective growth rate is calculated over the entire history of the cell
         state.effGrowth = state.effGrowth * state.cellAge + state.strainRate * state.oldLen
