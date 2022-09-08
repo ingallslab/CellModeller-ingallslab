@@ -11,7 +11,8 @@ import subprocess
 version_py = os.path.join(os.path.dirname(__file__), 'CellModeller/version.py')
 
 try:
-    version_git = subprocess.check_output(["git", "describe"]).rstrip()
+    #version_git = subprocess.check_output(["git", "describe"]).rstrip()
+    version_git = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 except:
     with open(version_py, 'r') as fh:
         version_git = open(version_py).read().strip().split('=')[-1].replace('"','')
@@ -22,8 +23,16 @@ except:
 
 
 setup(name='CellModeller',
-    install_requires=['numpy', 'scipy', 'pyopengl', 'mako', 'pyqt5', 'pyopencl', 'reportlab', 'matplotlib','vtk'],
-    setup_requires=['numpy', 'scipy', 'pyopengl', 'mako', 'pyqt5', 'pyopencl', 'reportlab', 'matplotlib','vtk'],
+    install_requires=['numpy', 'scipy', 'pyopengl', 'mako', 'pyqt5', 'pyopencl', 'reportlab', 'matplotlib',
+                      'vtk',
+                      'pyabc',
+                      'opencv-python',
+                      'scikit-image'],
+    setup_requires=['numpy', 'scipy', 'pyopengl', 'mako', 'pyqt5', 'pyopencl', 'reportlab', 'matplotlib',
+                    'vtk',
+                    'pyabc',
+                    'opencv-python',
+                    'scikit-image'],
     packages=['CellModeller',
                 'CellModeller.Biophysics',
                 'CellModeller.Biophysics.BacterialModels',
