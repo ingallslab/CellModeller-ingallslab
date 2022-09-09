@@ -11,6 +11,7 @@ import imp
 import configparser
 import importlib
 
+
 class Simulator:
     """
 This class is in charge of running the simulation, creating the various models
@@ -40,17 +41,17 @@ A function called setparams must be included in the module file, and the paramet
     # do anything yet unti we use 'init' method to specify the models for
     # physical interaction, genetic circuit, diffusion and integrator.
     def __init__(self, \
-                    moduleName, \
-                    dt, \
-                    pickleSteps=50, \
-                    outputDirName=None, \
-                    moduleStr=None, \
-                    saveOutput=False, \
-                    clPlatformNum=0, \
-                    clDeviceNum=0, \
-                    is_gui=False, \
-                    psweep=False, \
-                    params={}):
+                 moduleName, \
+                 dt, \
+                 pickleSteps=50, \
+                 outputDirName=None, \
+                 moduleStr=None, \
+                 saveOutput=False, \
+                 clPlatformNum=0, \
+                 clDeviceNum=0, \
+                 is_gui=False, \
+                 psweep=False, \
+                 params={}):
         # Is this simulator running in a gui?
         self.is_gui = is_gui
 
@@ -62,6 +63,7 @@ A function called setparams must be included in the module file, and the paramet
         self.pickleSteps = pickleSteps
 
         # No cells yet, initialise indices and empty lists/dicts, zero counters
+        self._next_label = 1
         self._next_id = 1
         self._next_idx = 0
         self.idToIdx = {}
@@ -73,7 +75,7 @@ A function called setparams must be included in the module file, and the paramet
 
         # Time step
         self.dt = dt
-        
+
         # Parametric sweep
         self.psweep = psweep
         self.params = params
@@ -87,17 +89,17 @@ A function called setparams must be included in the module file, and the paramet
             return
 
         # Two ways to specify a module (model):
-        self.moduleName = moduleName # Import via standard python
-        self.moduleStr = moduleStr # Import stored python code string (from a pickle usually)
+        self.moduleName = moduleName  # Import via standard python
+        self.moduleStr = moduleStr  # Import stored python code string (from a pickle usually)
 
         if self.moduleStr:
-            print("Importing model %s from string"%(self.moduleName))
+            print("Importing model %s from string" % (self.moduleName))
             self.module = imp.new_module(moduleName)
             exec(moduleStr, self.module.__dict__)
         else:
             # In case the moduleName is a path to a python file:
             # Get path and file name
-            (path,name) = os.path.split(self.moduleName) #path = blank; name = module (without the .py)
+            (path, name) = os.path.split(self.moduleName)  # path = blank; name = module (without the .py)
 
             # Append path to PYTHONPATH, if no path do nothing
             if path:
@@ -105,7 +107,7 @@ A function called setparams must be included in the module file, and the paramet
                     sys.path.append(path)
             # Remove .py extension if present
             self.moduleName = str(name).split('.')[0]
-            print("Importing model %s"%(self.moduleName))
+            print("Importing model %s" % (self.moduleName))
             if self.moduleName in sys.modules:
                 self.module = sys.modules[self.moduleName]
                 importlib.reload(self.module)
@@ -113,29 +115,29 @@ A function called setparams must be included in the module file, and the paramet
                 self.module = __import__(self.moduleName, globals(), locals(), [], 0)
 
         # Optional import of PDEDolfinSolver
-        self.pdeModuleName = self.moduleName + '_DolfinPDESolver' # make sure to use this naming convention when making the PDESolver files
-        
+        self.pdeModuleName = self.moduleName + '_DolfinPDESolver'  # make sure to use this naming convention when making the PDESolver files
+
         try:
             self.pdeModule = __import__(self.pdeModuleName, globals(), locals(), [], 0)
-            print("Importing DolfinPDESolver %s"%self.pdeModuleName)
+            print("Importing DolfinPDESolver %s" % self.pdeModuleName)
         except:
             print("No Dolfin solver found")
             pass
 
         # TJR: What is this invar thing? I have never seen this used...
-        #setup the simulation here:
-        #if invar:
+        # setup the simulation here:
+        # if invar:
         #    self.module.setup(self, invar)
-        #else:
+        # else:
 
         # Set up the data output directory
-        self.dataOutputInitialised=False
+        self.dataOutputInitialised = False
         self.outputDirName = outputDirName
         self.setSaveOutput(saveOutput)
-        
+
         # Call the user-defined setup function on ourself
         self.module.setup(self)
-        
+
         # Set model parameters if doing a parametric sweep
         if self.psweep == True:
             self.module.setparams(params)
@@ -148,26 +150,27 @@ A function called setparams must be included in the module file, and the paramet
     def init_data_output(self):
         import time
         startTime = time.localtime()
-        outputFileRoot = self.outputDirName if self.outputDirName else self.moduleName + '-' + time.strftime('%y-%m-%d-%H-%M', startTime)
+        outputFileRoot = self.outputDirName if self.outputDirName else self.moduleName + '-' + time.strftime(
+            '%y-%m-%d-%H-%M', startTime)
         if self.psweep:
             self.outputDirPath = outputFileRoot
         else:
             self.outputDirPath = os.path.join('data', outputFileRoot)
-        
+
         # Commented out to allow exporting to current directory of simulation
         '''
         if 'CMPATH' in os.environ:
             self.outputDirPath = os.path.join(os.environ["CMPATH"], self.outputDirPath)
-        '''          
-        
+        '''
+
         # Add a number to end of dir name if it already exists 
         label = 2
         while os.path.exists(self.outputDirPath):
-            if label>2:
-                self.outputDirPath = self.outputDirPath[:-2]+"_"+str(label)
+            if label > 2:
+                self.outputDirPath = self.outputDirPath[:-2] + "_" + str(label)
             else:
-                self.outputDirPath = self.outputDirPath+"_"+str(label)
-            label+=1
+                self.outputDirPath = self.outputDirPath + "_" + str(label)
+            label += 1
         os.makedirs(self.outputDirPath)
 
         # write a copy of the model into the dir (for reference), 
@@ -179,11 +182,18 @@ A function called setparams must be included in the module file, and the paramet
         open(os.path.join(self.outputDirPath, self.moduleName), 'w').write(self.moduleOutput)
 
         self.dataOutputInitialised = True
-        
+
         # Save parameters to txt in psweep in case sims don't finish
         if self.psweep:
             open(os.path.join(self.outputDirPath, 'params.txt'), 'w').write(str(self.params))
-   
+
+    # Get a label for the next cell family tree to be created
+    # Ati
+    def next_label(self):
+        label = self._next_label
+        self._next_label += 1
+        return label
+
     ## Get an id for the next cell to be created
     def next_id(self):
         id = self._next_id
@@ -195,7 +205,6 @@ A function called setparams must be included in the module file, and the paramet
         idx = self._next_idx
         self._next_idx += 1
         return idx
-
 
     # Currently, the user-defined regulation module creates the
     # biophysics, regulation, and signalling objects in a function
@@ -211,7 +220,7 @@ A function called setparams must be included in the module file, and the paramet
     # 'integ' = integrator
     # 'solverParams' = FEniCS solver parameters
 
-    #Updated to be interfaced with FEniCS
+    # Updated to be interfaced with FEniCS
     def init(self, phys, reg, sig, integ, solverParams=None):
         self.phys = phys
         self.reg = reg
@@ -230,74 +239,74 @@ A function called setparams must be included in the module file, and the paramet
             self.sig.setRegulator(reg)
             self.integ.setSignalling(sig)
             self.reg.setSignalling(sig)
-            
+
         if solverParams:
             self.solver = self.pdeModule.DolfinSolver(solverParams)
         else:
             self.solver = None
-            
+
     ## Set up the OpenCL contex, the configuration is set up the first time, and is saved in the config file
     def init_cl(self, platnum, devnum):
         # Check that specified platform exists
         platforms = cl.get_platforms()
-        if len(platforms)<=platnum:
+        if len(platforms) <= platnum:
             print("Specified OpenCL platform number (%d) does not exist.")
             print("Options are:")
             for p in range(len(platforms)):
-                print("%d: %s"%(p, str(platforms[p]))) 
+                print("%d: %s" % (p, str(platforms[p])))
             return False
         else:
             platform = platforms[platnum]
 
         # Check that specified device exists on that platform
         devices = platforms[platnum].get_devices()
-        if len(devices)<=devnum:
-            print("Specified OpenCL device number (%d) does not exist on platform %s."%(devnum,platform))
+        if len(devices) <= devnum:
+            print("Specified OpenCL device number (%d) does not exist on platform %s." % (devnum, platform))
             print("Options are:")
             for d in range(len(devices)):
-                print("%d: %s"%(d, str(devices[d]))) 
+                print("%d: %s" % (d, str(devices[d])))
             return False
         else:
             device = devices[devnum]
 
         # Create a context and queue
         self.CLContext = cl.Context(properties=[(cl.context_properties.PLATFORM, platform)],
-                                          devices=[device])
+                                    devices=[device])
         self.CLQueue = cl.CommandQueue(self.CLContext)
         print("Set up OpenCL context:")
-        print("  Platform: %s"%(str(platform.name)))
-        print("  Device: %s"%(str(device.name)))
+        print("  Platform: %s" % (str(platform.name)))
+        print("  Device: %s" % (str(device.name)))
         return True
-        
+
     ## Get the OpenCL context and queue for running kernels 
     def getOpenCL(self):
         return (self.CLContext, self.CLQueue)
 
     ## set cell states from a given dict
     def setCellStates(self, cellStates):
-        #Set cell states, e.g. from pickle file
-        #this sets them on the card too
+        # Set cell states, e.g. from pickle file
+        # this sets them on the card too
         self.cellStates = {}
         self.cellStates = cellStates
         idx_map = {}
         id_map = {}
         idmax = 0
-        for id,state in cellStates.items():
+        for id, state in cellStates.items():
             idx_map[state.id] = state.idx
             id_map[state.idx] = state.id
-            if id>idmax:
-                idmax=id
+            if id > idmax:
+                idmax = id
         self.idToIdx = idx_map
         self.idxToId = id_map
-        self._next_id = idmax+1
+        self._next_id = idmax + 1
         self._next_idx = len(cellStates)
         self.reg.cellStates = cellStates
         self.phys.load_from_cellstates(cellStates)
-    
+
     ## Add a graphics renderer - this should not be here --> GUI
     def addRenderer(self, renderer):
         self.renderers.append(renderer)
-        
+
     ## Reset the simulation back to initial conditions
     def reset(self):
         # Delete existing models
@@ -310,8 +319,8 @@ A function called setparams must be included in the module file, and the paramet
         if self.reg:
             del self.reg
 
-        if not self.moduleStr: 
-            #This will take up any changes made in the model file
+        if not self.moduleStr:
+            # This will take up any changes made in the model file
             importlib.reload(self.module)
         else:
             # TJR: Module loaded from pickle, cannot reset?
@@ -321,7 +330,6 @@ A function called setparams must be included in the module file, and the paramet
         self.cellStates = {}
         # Recreate models via module setup
         self.module.setup(self)
-
 
     # Divide a cell to two daughter cells
     def divide(self, pState):
@@ -334,13 +342,18 @@ A function called setparams must be included in the module file, and the paramet
         d1State.id = d1id
         d2State.id = d2id
 
-        #reset cell ages
+        # label of daughters
+        # Ati
+        d1State.label = pState.label
+        d2State.label = pState.label
+
+        # reset cell ages
         d1State.cellAge = 0
         d2State.cellAge = 0
-        #inherit effGrowth
+        # inherit effGrowth
         d1State.effGrowth = pState.effGrowth
         d2State.effGrowth = pState.effGrowth
-        
+
         self.lineage[d1id] = pid
         self.lineage[d2id] = pid
 
@@ -365,19 +378,19 @@ A function called setparams must be included in the module file, and the paramet
             self.integ.divide(pState, d1State, d2State)
         self.reg.divide(pState, d1State, d2State)
 
-    #From WPJS -AY
+    # From WPJS -AY
     def kill(self, state):
-   	   
-   	   # carry out any actions listed in module
-   	   self.reg.kill(state)
-   	   
-   	   # mask the cell so that the mechanics algorithm ignores it
-   	   self.phys.delete(state)
-   	   
-   	   # delete all instance of cell at cellState level
-   	   cid = state.id
-   	   #print('Removing cell with id %i' % state.id)
-   	   del self.cellStates[cid]
+
+        # carry out any actions listed in module
+        self.reg.kill(state)
+
+        # mask the cell so that the mechanics algorithm ignores it
+        self.phys.delete(state)
+
+        # delete all instance of cell at cellState level
+        cid = state.id
+        # print('Removing cell with id %i' % state.id)
+        del self.cellStates[cid]
 
     ## Add a new cell to the simulator
     def addCell(self, cellType=0, cellAdh=0, length=3.5, **kwargs):
@@ -387,6 +400,8 @@ A function called setparams must be included in the module file, and the paramet
         cs.cellType = cellType
         cs.cellAdh = cellAdh
         cs.idx = self.next_idx()
+        # add new label to next cell family tree
+        cs.label = self.next_label()
         self.idToIdx[cid] = cs.idx
         self.idxToId[cs.idx] = cid
         self.cellStates[cid] = cs
@@ -396,8 +411,8 @@ A function called setparams must be included in the module file, and the paramet
         if self.sig:
             self.sig.addCell(cs)
         self.phys.addCell(cs, **kwargs)
-           
-    #---
+
+    # ---
     # Some functions to modify existing cells (e.g. from GUI)
     # Eventually prob better to have a generic editCell() that deals with this stuff
     #
@@ -409,47 +424,46 @@ A function called setparams must be included in the module file, and the paramet
     # This method is where objects phys, reg, sig and integ are called.
     # It is the simulator's main loop
     def step(self):
-        self.reg.step(self.dt) #calls user-defined update function in CM module
+        self.reg.step(self.dt)  # calls user-defined update function in CM module
         states = dict(self.cellStates)
-        for (cid,state) in list(states.items()):
+        for (cid, state) in list(states.items()):
             state.time = self.stepNum * self.dt
-            
-            #From WPJS -AY
-            if state.deathFlag:			# priority 1: death
+
+            # From WPJS -AY
+            if state.deathFlag:  # priority 1: death
                 self.kill(state)
-				   	  
+
             if state.divideFlag:
-                self.divide(state) #neighbours no longer current
-                
+                self.divide(state)  # neighbours no longer current
+
             self.phys.set_cells()
-                        
-        while not self.phys.step(self.dt): #neighbours are current here
+
+        while not self.phys.step(self.dt):  # neighbours are current here
             pass
         if self.sig:
             self.sig.step(self.dt)
         if self.integ:
             self.integ.step(self.dt)
-            
+
         if self.solver:
             self.reg.solvePDEandGrowth()
-       
-        if self.saveOutput and self.stepNum%self.pickleSteps==0:
+
+        if self.saveOutput and self.stepNum % self.pickleSteps == 0:
             self.writePickle()
 
         self.stepNum += 1
         return True
 
-
     ## Import cells to the simulator from csv file. The file contains a list of 7-coordinates {pos,dir,len} (comma delimited) of each cell - also, there should be no cells around - ie run this from an empty model instead of addcell
     def importCells_file(self, filename):
-        f=open(filename, 'rU')
-        list=csv.reader(f,delimiter=',')
+        f = open(filename, 'rU')
+        list = csv.reader(f, delimiter=',')
         for row in list:
-            cpos = [float(row[0]),float(row[1]),float(row[2])]
-            cdir = [float(row[3]),float(row[4]),float(row[5])]
-            clen = float(row[6]) #radius should be removed from this in the analysis
-            ndir = cdir/numpy.linalg.norm(cdir) #normalize cell dir just in case
-            #this should probably also check for overlaps
+            cpos = [float(row[0]), float(row[1]), float(row[2])]
+            cdir = [float(row[3]), float(row[4]), float(row[5])]
+            clen = float(row[6])  # radius should be removed from this in the analysis
+            ndir = cdir / numpy.linalg.norm(cdir)  # normalize cell dir just in case
+            # this should probably also check for overlaps
             self.addCell(pos=tuple(cpos), dir=tuple(ndir), length=clen)
 
     ## Write current simulation state to an output file
@@ -463,7 +477,7 @@ A function called setparams must be included in the module file, and the paramet
         data['moduleStr'] = self.moduleOutput
         data['moduleName'] = self.moduleName
         if self.integ:
-        #    print("Writing new pickle format")
+            #    print("Writing new pickle format")
             data['specData'] = self.integ.levels
         if self.sig:
             data['sigGridOrig'] = self.sig.gridOrig
@@ -474,7 +488,7 @@ A function called setparams must be included in the module file, and the paramet
             data['sigData'] = self.integ.cellSigLevels
             data['sigGrid'] = self.integ.signalLevel
         pickle.dump(data, outfile, protocol=-1)
-        #output csv file with cell pos,dir,len - sig?
+        # output csv file with cell pos,dir,len - sig?
 
     # Populate simulation from saved data pickle
     def loadGeometryFromPickle(self, data):
@@ -483,14 +497,14 @@ A function called setparams must be included in the module file, and the paramet
         idx_map = {}
         id_map = {}
         idmax = 0
-        for id,state in data['cellStates'].items():
+        for id, state in data['cellStates'].items():
             idx_map[state.id] = state.idx
             id_map[state.idx] = state.id
-            if id>idmax:
-                idmax=id
+            if id > idmax:
+                idmax = id
         self.idToIdx = idx_map
         self.idxToId = id_map
-        self._next_id = idmax+1
+        self._next_id = idmax + 1
         self._next_idx = len(data['cellStates'])
         if self.integ:
             self.integ.setCellStates(self.cellStates)
@@ -505,19 +519,17 @@ A function called setparams must be included in the module file, and the paramet
         idx_map = {}
         id_map = {}
         idmax = 0
-        for id,state in data['cellStates'].items():
+        for id, state in data['cellStates'].items():
             idx_map[state.id] = state.idx
             id_map[state.idx] = state.id
-            if id>idmax:
-                idmax=id
+            if id > idmax:
+                idmax = id
         self.idToIdx = idx_map
         self.idxToId = id_map
-        self._next_id = idmax+1
+        self._next_id = idmax + 1
         self._next_idx = len(data['cellStates'])
         if self.integ:
             if 'sigData' in data:
-                self.integ.setLevels(data['specData'],data['sigData'])
+                self.integ.setLevels(data['specData'], data['sigData'])
             elif 'specData' in data:
                 self.integ.setLevels(data['specData'])
-
-
