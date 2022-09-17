@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
     # mean_summary_statistic_report = {summary statistic name: mean value, ....}
     # local summary statistics
-    local_mean_summary_statistic_report = data_analysis(input_directory, summary_statistic_method_list, mode1, dt,
+    local_mean_summary_statistic_report = data_analysis(input_directory, summary_statistic_method_list, dt,
                                                         mode1, max_distance_between_cells,
                                                         um_pixel_ratio, min_size_of_micro_colony)
     # global summary statistics
