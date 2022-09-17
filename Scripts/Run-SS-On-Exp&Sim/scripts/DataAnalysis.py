@@ -344,12 +344,15 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
         df_current_time_step = func_current_bacteria_info(cs, dt)
 
         # fit ellipse
+        # if  number of bacteria < 2 : ellipse_params = `nan`
         ellipse_params = fit_ellipse(df_current_time_step)
 
         """
            calculation of aspect ratio
         """
-        if "Aspect Ratio" in summary_statistic_method:
+        # if  number of bacteria < 2 : ellipse_params = `nan`
+        # so: the aspect ratio can not be calculated
+        if "Aspect Ratio" in summary_statistic_method and df_current_time_step.shape[0] > 1:
             aspect_ratio = aspect_ratio_calc(ellipse_params)
             # store aspect ratio
             aspect_ratio_list.append(aspect_ratio)
@@ -360,7 +363,7 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
         """
            calculation of Anisotropy
         """
-        if "Anisotropy" in summary_statistic_method:
+        if "Anisotropy" in summary_statistic_method and df_current_time_step.shape[0] > 1:
             mean_anisotropy = anisotropy_calc(df_current_time_step, max_distance_between_cells)
             # store anisotropy
             anisotropy_list.append(mean_anisotropy)
@@ -407,14 +410,14 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
     return report_mean_summary_statistics
 
 
-def data_analysis(pickle_files_directory, summary_statistic_method, mode, dt, max_distance_between_cells,
-                  um_pixel_ratio, min_size_of_micro_colony=''):
+def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='global', max_distance_between_cells=3.4,
+                  um_pixel_ratio=0.144, min_size_of_micro_colony=2):
     """
     goal: calculation of summary statistics in global or local mode
     @param pickle_files_directory str directory of simulation / experimental pickle files
     @param summary_statistic_method   str     the method that we apply on the micro-colonies
-    @param mode str it shows we want to calculate global summary statistics or local summary statistics
     @param dt float interval time
+    @param mode str it shows we want to calculate global summary statistics or local summary statistics
     @param max_distance_between_cells float There is a maximum distance between bacteria that can be neighbours.
     @param um_pixel_ratio float  convert um to pixel (requires for calculation of density summary statistic)
     @param min_size_of_micro_colony int minimum size of micro colony (only for local mode)
