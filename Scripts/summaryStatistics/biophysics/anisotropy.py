@@ -34,7 +34,7 @@ def get_order_parameter(cell_angles):
     """
     Calculates the order parameter for a list of cells
     
-    @param  cell_angles      list of cell orientation angles in radians
+    @param cell_angles      list of cell orientation angles in radians
     @return order_parameter Scalar order parameter (data_type = double)
     """
     # Calculate director vector (average direction of cells in colony)
