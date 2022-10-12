@@ -1,5 +1,6 @@
-"""
+'''
 Algorithm for plotting growth rate vs nearest location to colony edge:
+
 Obtain equation for ellipse surrounding colony
 For each cell:
     Obtain equation of line along cell's long axis
@@ -7,32 +8,26 @@ For each cell:
     Calculate shortest distance between centroid and intersections; select shortest distance
 
 Plot instantaneous growth rate (strain rate) vs. shortest distance to ellipse boundary for all cells
+
 Instructions:
 Call the main() function, giving a cellStates dict as an argument.
 Optional: include path to a directory to export plots
-"""
+'''
 # Standard modules
 import math
 import numpy as np
+import os
 import pickle  # only needed for testing
+import sys
 
-import pandas as pd
 # Installed modules
+import CellModeller
 from matplotlib import pyplot as plt
 from scipy.optimize import fsolve
 from sklearn.linear_model import LinearRegression
 
 # Local/custom modules
 from lownerJohnEllipseMaster.src.lownerJohnEllipse import plot_ellipse, welzl
-
-def fit_enclosing_ellipse(points):
-    # convert dataframe to numpy array
-    points = points.to_numpy()
-    # print(points)
-    # finds the smallest ellipse covering a finite set of points
-    # https://github.com/dorshaviv/lowner-john-ellipse
-    enclosing_ellipse = welzl(points)
-    return enclosing_ellipse
 
 
 def show_ellipse_plot(ellipse, centroids):
@@ -94,16 +89,16 @@ def func(x, *data):
     center, major, minor, theta, cell = data
 
     # Parameters for equation of a line
-    cell_x = cell['x_center']
-    cell_y = cell['y_center']
-    slope = np.tan(cell['orientation'])
+    cell_x = cell.pos[0]
+    cell_y = cell.pos[1]
+    slope = cell.dir[1] / cell.dir[0]
 
     # Other parameters for ellipse equation
     h = center[0]  # shift in x
     k = center[1]  # shift in y
 
     eqs = [((x[0] - h) * np.cos(theta) + (x[1] - k) * np.sin(theta)) ** 2 / major ** 2 + (
-            (x[0] - h) * np.sin(theta) - (x[1] - k) * np.cos(theta)) ** 2 / minor ** 2 - 1,
+                (x[0] - h) * np.sin(theta) - (x[1] - k) * np.cos(theta)) ** 2 / minor ** 2 - 1,
            slope * (x[0] - cell_x) + cell_y - x[1]]
 
     return eqs
@@ -158,15 +153,12 @@ def filter_by_cell_age(cells, min_age=2):
     @param  min_age             minimum age to include cell in the filtered list; recommended age is 2
     @return filtered_cellstates cellStates dict with cells filtered by age
     """
-    cells['filtered_cells'] = False
+    filtered_cellstates = {}
+    for i, cell in cells.items():
+        if cell.cellAge >= min_age:
+            filtered_cellstates[i] = cell
 
-    for i, cell in cells.iterrows():
-        if cells.iloc[i]['cell_age'] >= min_age:
-            cells.at[i, 'filtered_cells'] = True
-
-    cells = cells.loc[cells["filtered_cells"] == True].reset_index(drop=True)
-
-    return cells
+    return filtered_cellstates
 
 
 def get_all_centroids(cells):
@@ -176,9 +168,52 @@ def get_all_centroids(cells):
     @param  cells           cellStates dict
     @return all_centroids   nparray (n_cells, 2) of cell centroids
     """
-    all_centroids = cells[['x_center', 'y_center']]
+    # Initialize storage variables
+    n_cells = len(cells.keys())
+    all_centroids = np.zeros((n_cells, 2))
+
+    # Obtain centroids for all cells
+    for i, cell in enumerate(cells.values()):
+        all_centroids[i][0] = cell.pos[0]
+        all_centroids[i][1] = cell.pos[1]
 
     return all_centroids
+
+
+def get_growth_rates(cells, dt):
+    """
+    Obtain growth rates for all cells with age > 1
+
+    @param  cells           cellStates dict
+    @return growth_rates    nparray of growth rates (dL/dt)
+    """
+    # Initialize storage variables
+    n_cells = len(cells.keys())
+    growth_rates = np.zeros(n_cells)
+
+    # Get single-cell properties
+    for i, cell in enumerate(cells.values()):
+        growth_rates[i] = cell.strainRate_rolling / dt
+
+    return growth_rates
+
+
+def get_centroids(cells):
+    """
+    Obtain growth rates for all cells with age > 1
+    @param  cells           cellStates dict
+    @return centroids       nparray of centroids (n_cells, 2)
+    """
+    # Initialize storage variables
+    n_cells = len(cells.keys())
+    centroids = np.zeros((n_cells, 2))
+
+    # Collect centroid values from cellStates dict
+    for i, cell in enumerate(cells.values()):
+        centroids[i][0] = cell.pos[0]
+        centroids[i][1] = cell.pos[1]
+
+    return centroids
 
 
 def get_distances_to_colony_edge(cells, center, major, minor, theta):
@@ -194,15 +229,15 @@ def get_distances_to_colony_edge(cells, center, major, minor, theta):
     """
 
     # Initialize storage variables
-    n_cells = cells.shape[0]
+    n_cells = len(cells)
     dist = np.zeros(n_cells)
 
     # Fit ellipse around colony
     # center, major, minor, theta = welzl(all_centroids)
 
     # For each cell, calculate min distance to colony border in direction of cell's major axis
-    for i, cell in cells.iterrows():
-        cell_centroid = [cells.iloc[i]['x_center'], cells.iloc[i]['y_center']]
+    for i, cell in enumerate(cells.values()):
+        cell_centroid = [cell.pos[0], cell.pos[1]]
         function_inputs = (center, major, minor, theta, cell)
         roots = solve_roots(function_inputs)
         dist[i] = shortest_distance(roots[0], roots[1], cell_centroid)
@@ -246,44 +281,43 @@ def plot_growth_vs_distance_to_colony_edge(growth_rates, dist, export_path):
     plt.savefig(export_path + "growth_vs_distance_to_colony_edge.png", bbox_inches='tight')
 
 
-def calc_dist_vs_growth_rate(cells, fig_export_path=''):
+def main(cells, dt, fig_export_path=''):
     """
     The main function that will be used by pyabc
 
     Takes as input a cellStates dict and outputs the slope of the linear fit to
     distance to colony border along cell's main axis vs. growth rate
 
-    @param  cells      dataframe         cells features value dataframe
+    @param  cells               cellStates dict
+    @param  dt                  simulation time step (h)
     @param  fig_export_path     optional: path to export a plot of growth rate vs. distance to colony edge
     @return dist_vs_growth_rate slope of linear fit to distance vs. growth rate
     """
-    # Create cells dataframe filtered for cellAge > 1
+    # Create cellStates dict filtered for cellAge > 1
     cells_age_filtered = filter_by_cell_age(cells, min_age=2)
+    n_cells_age_filtered = len(cells_age_filtered.keys())
 
-    if cells_age_filtered.shape[0] > 0:
+    # Get single-cell properties
+    growth_rates = get_growth_rates(cells_age_filtered, dt)
+    all_centroids = get_centroids(cells)
 
-        # Get single-cell properties
-        growth_rates = cells_age_filtered['growth_rate'].values.tolist()
-        all_centroids = get_all_centroids(cells)
+    # Fit ellipse around colony
+    if len(cells.keys()) >= 1000:
+        sys.setrecursionlimit(10000)  # necessary to run welzl for colonies with n_cells > 1000
+    center, major, minor, theta = welzl(all_centroids)
 
-        # Fit ellipse around colony
-        center, major, minor, theta = fit_enclosing_ellipse(all_centroids)
+    # For each cell, calculate min distance to colony border in direction of cell's major axis
+    dist = get_distances_to_colony_edge(cells_age_filtered, center, major, minor, theta)
 
-        # For each cell, calculate min distance to colony border in direction of cell's major axis
-        dist = get_distances_to_colony_edge(cells_age_filtered, center, major, minor, theta)
+    # Linear fit of growth rate vs distance to colony edge along cell's major axis
+    dist_reshape = dist.reshape((-1, 1))
+    model = LinearRegression().fit(dist_reshape, growth_rates)
+    dist_vs_growth_rate = model.coef_[0]  # slope
 
-        # Linear fit of growth rate vs distance to colony edge along cell's major axis
-        dist_reshape = dist.reshape((-1, 1))
-        linear_regressor = LinearRegression()
-        model = linear_regressor.fit(dist_reshape, growth_rates)
-        dist_vs_growth_rate = model.coef_[0]  # slope
-
-        # Optional: save a plot to fig_export_path
-        if fig_export_path:
-            plot_growth_vs_distance_to_colony_edge(growth_rates, dist, fig_export_path)
-            print('Growth rate plot exported to: ', fig_export_path)
-
-    else:
-        dist_vs_growth_rate = np.nan
+    # Optional: save a plot to fig_export_path
+    if fig_export_path:
+        plot_growth_vs_distance_to_colony_edge(growth_rates, dist, fig_export_path)
+        print('Growth rate plot exported to: ', fig_export_path)
 
     return dist_vs_growth_rate
+
