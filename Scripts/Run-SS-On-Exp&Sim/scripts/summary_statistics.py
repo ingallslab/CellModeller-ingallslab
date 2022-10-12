@@ -6,8 +6,11 @@ import scipy.linalg as la
 
 def fit_enclosing_ellipse(points):
     """
-    goal: An ellipse is fitted around bacteria in a specific micro colony.
-    @param points dataframe endpoints (vertex & co-vertex) of bacteria in specific micro colony
+    goal: An ellipse is fitted around bacteria in a specific micro colony (local mode) or
+    in specific time step (global mode).
+
+    @param points dataframe endpoints (vertex & co-vertex) of bacteria in specific micro colony(local mode) or
+    in specific time step (global mode)
 
     Returns: enclosing_ellipse tuple a tuple (c, a, b, t), where c = (x, y) is the center, a and
             b are the major and minor radii, and t is the rotation angle.
@@ -34,7 +37,7 @@ def fit_enclosing_ellipse(points):
 def find_co_vertex(center_x_list, center_y_list, minor_list, angle_rotation_list):
 
     """
-    goal: find co-vertex of bacteria in a specif micro colony
+    goal: find co-vertex of bacteria in a specif micro colony(local mode) or in specific time step (global mode)
     @param center_x_list list x coordinate of center of bacteria
     @param center_y_list list y coordinate of center of bacteria
     @param minor_list list  length of minor axis of bacteria
@@ -72,10 +75,11 @@ def find_co_vertex(center_x_list, center_y_list, minor_list, angle_rotation_list
     return x_co_vertex, y_co_vertex
 
 
-def fit_ellipse(bac_in_micro_colony):
+def fit_ellipse(cs):
     """
 
-    @param bac_in_micro_colony dataframe bacteria features value in specific micro colony
+    @param cs dict bacteria features value in specific micro colony(local mode) or
+    in specific time step (global mode)
 
     Returns: ellipse_params  tuple a tuple (c, a, b, t), where c = (x, y) is the center, a and
             b are the major and minor radii, and t is the rotation angle.
@@ -83,15 +87,16 @@ def fit_ellipse(bac_in_micro_colony):
     """
     # fit ellipse to micro colony
     # endpoints
-    vertex1_x = bac_in_micro_colony['x_end_point1'].values.tolist()
-    vertex1_y = bac_in_micro_colony['y_end_point1'].values.tolist()
-    vertex2_x = bac_in_micro_colony['x_end_point2'].values.tolist()
-    vertex2_y = bac_in_micro_colony['y_end_point2'].values.tolist()
+    vertex1_x = [cs[it].ends[0][0] for it in cs]
+    vertex1_y = [cs[it].ends[0][1] for it in cs]
+    vertex2_x = [cs[it].ends[1][0] for it in cs]
+    vertex2_y = [cs[it].ends[1][1] for it in cs]
 
-    bacteria_center_x = bac_in_micro_colony['x_center'].values.tolist()
-    bacteria_center_y = bac_in_micro_colony['y_center'].values.tolist()
-    bacteria_minor = bac_in_micro_colony['minor'].values.tolist()
-    bacteria_orientation = bac_in_micro_colony['orientation'].values.tolist()
+    bacteria_center_x = [cs[it].pos[0] for it in cs]
+    bacteria_center_y = [cs[it].pos[1] for it in cs]
+    bacteria_minor = [cs[it].radius for it in cs]
+    # direction vector: [x, y] --> orientation: arctan (y / x)
+    bacteria_orientation = [np.arctan2(cs[it].dir[1], cs[it].dir[0]) for it in cs if cs]
 
     # now I calculate co-vertexes of bacteria ellipse
     co_vertex_x, co_vertex_y = find_co_vertex(bacteria_center_x, bacteria_center_y, bacteria_minor,
@@ -113,7 +118,7 @@ def aspect_ratio_calc(ellipse_params):
     @param ellipse_params  tuple a tuple (c, a, b, t), where c = (x, y) is the center, a and
             b are the major and minor radii, and t is the rotation angle.
 
-    Returns: aspect_ratio float aspect ratio of micro colony
+    Returns: aspect_ratio float aspect ratio of micro colony(local mode) or specific time step (global mode)
 
     """
     # calculate aspect ratio
@@ -123,13 +128,14 @@ def aspect_ratio_calc(ellipse_params):
     return aspect_ratio
 
 
-def anisotropy_calc(bac_in_micro_colony, max_neighbour_distance):
+def anisotropy_calc(cs, max_neighbour_distance):
     """
     goal: calculation of Anisotropy
-    @param bac_in_micro_colony dataframe bacteria features value in specific micro colony
+    @param cs dict bacteria features value in specific micro colony(local mode) or in specific time step (global mode)
     @param max_neighbour_distance float There is a maximum distance between bacteria that can be neighbours.
 
-    Returns: mean_anisotropy float average value of anisotropy of bacteria in specific micro colony
+    Returns: mean_anisotropy float average value of anisotropy of bacteria in specific micro colony(local mode) or
+    in specific time step (global mode)
 
     """
     # main idea: https://github.com/ingallslab/bsim-related/blob/main/bsim_related/data_processing/cell_data_processing.py#L184
@@ -137,37 +143,38 @@ def anisotropy_calc(bac_in_micro_colony, max_neighbour_distance):
     local_anisotropies = []
 
     # orientation of bacteria
-    bacteria_orientation = bac_in_micro_colony["orientation"]
-    bacteria_x_end_point1 = bac_in_micro_colony['x_end_point1']
-    bacteria_y_end_point1 = bac_in_micro_colony['y_end_point1']
-    bacteria_x_end_point2 = bac_in_micro_colony['x_end_point2']
-    bacteria_y_end_point2 = bac_in_micro_colony['y_end_point2']
+    # direction vector: [x, y] --> orientation: arctan (y / x)
+    bacteria_orientation = [np.arctan2(cs[it].dir[1], cs[it].dir[0]) for it in cs if cs]
+    bacteria_x_end_point1 = [cs[it].ends[0][0] for it in cs]
+    bacteria_y_end_point1 = [cs[it].ends[0][1] for it in cs]
+    bacteria_x_end_point2 = [cs[it].ends[1][0] for it in cs]
+    bacteria_y_end_point2 = [cs[it].ends[1][1] for it in cs]
 
-    for bacterium_index in range(bac_in_micro_colony.shape[0]):
+    for bacterium_index in range(len(cs)):
         num_neighbours = 0
         # Projection matrix
         projection_matrix = np.zeros(shape=(2, 2))
-        for other_bacterium_index in range(bac_in_micro_colony.shape[0]):
+        for other_bacterium_index in range(len(cs)):
             if other_bacterium_index != bacterium_index:
-                distance_between_bacteria_end_point1 = np.hypot(bacteria_x_end_point1.iloc[other_bacterium_index] -
-                                                                bacteria_x_end_point1.iloc[bacterium_index],
-                                                                bacteria_y_end_point1.iloc[other_bacterium_index]
-                                                                - bacteria_y_end_point1.iloc[bacterium_index])
+                distance_between_bacteria_end_point1 = np.hypot(bacteria_x_end_point1[other_bacterium_index] -
+                                                                bacteria_x_end_point1[bacterium_index],
+                                                                bacteria_y_end_point1[other_bacterium_index]
+                                                                - bacteria_y_end_point1[bacterium_index])
 
-                distance_between_bacteria_end_point2 = np.hypot(bacteria_x_end_point2.iloc[other_bacterium_index] -
-                                                                bacteria_x_end_point2.iloc[bacterium_index],
-                                                                bacteria_y_end_point2.iloc[other_bacterium_index]
-                                                                - bacteria_y_end_point2.iloc[bacterium_index])
+                distance_between_bacteria_end_point2 = np.hypot(bacteria_x_end_point2[other_bacterium_index] -
+                                                                bacteria_x_end_point2[bacterium_index],
+                                                                bacteria_y_end_point2[other_bacterium_index]
+                                                                - bacteria_y_end_point2[bacterium_index])
 
-                distance_between_bacteria_end_point1_2 = np.hypot(bacteria_x_end_point1.iloc[other_bacterium_index] -
-                                                                  bacteria_x_end_point2.iloc[bacterium_index],
-                                                                  bacteria_y_end_point1.iloc[other_bacterium_index]
-                                                                  - bacteria_y_end_point2.iloc[bacterium_index])
+                distance_between_bacteria_end_point1_2 = np.hypot(bacteria_x_end_point1[other_bacterium_index] -
+                                                                  bacteria_x_end_point2[bacterium_index],
+                                                                  bacteria_y_end_point1[other_bacterium_index]
+                                                                  - bacteria_y_end_point2[bacterium_index])
 
-                distance_between_bacteria_end_point2_1 = np.hypot(bacteria_x_end_point2.iloc[other_bacterium_index] -
-                                                                  bacteria_x_end_point1.iloc[bacterium_index],
-                                                                  bacteria_y_end_point2.iloc[other_bacterium_index]
-                                                                  - bacteria_y_end_point1.iloc[bacterium_index])
+                distance_between_bacteria_end_point2_1 = np.hypot(bacteria_x_end_point2[other_bacterium_index] -
+                                                                  bacteria_x_end_point1[bacterium_index],
+                                                                  bacteria_y_end_point2[other_bacterium_index]
+                                                                  - bacteria_y_end_point1[bacterium_index])
 
                 distance_list = [distance_between_bacteria_end_point1, distance_between_bacteria_end_point2,
                                  distance_between_bacteria_end_point1_2, distance_between_bacteria_end_point2_1]
@@ -179,12 +186,12 @@ def anisotropy_calc(bac_in_micro_colony, max_neighbour_distance):
                     cos(angle)                  cos(angle)*sin(angle)
                     cos(angle)*sin(angle)       sin(angle)
                     """
-                    projection_matrix += np.matrix([[np.cos(bacteria_orientation.iloc[other_bacterium_index]) ** 2,
-                                                     np.cos(bacteria_orientation.iloc[other_bacterium_index]) * np.sin(
-                                                         bacteria_orientation.iloc[other_bacterium_index])],
-                                                    [np.cos(bacteria_orientation.iloc[other_bacterium_index]) * np.sin(
-                                                        bacteria_orientation.iloc[other_bacterium_index]),
-                                                     np.sin(bacteria_orientation.iloc[other_bacterium_index]) ** 2]])
+                    projection_matrix += np.matrix([[np.cos(bacteria_orientation[other_bacterium_index]) ** 2,
+                                                     np.cos(bacteria_orientation[other_bacterium_index]) * np.sin(
+                                                         bacteria_orientation[other_bacterium_index])],
+                                                    [np.cos(bacteria_orientation[other_bacterium_index]) * np.sin(
+                                                        bacteria_orientation[other_bacterium_index]),
+                                                     np.sin(bacteria_orientation[other_bacterium_index]) ** 2]])
 
                     num_neighbours += 1
 
@@ -198,6 +205,6 @@ def anisotropy_calc(bac_in_micro_colony, max_neighbour_distance):
         # calculate mean anisotropy
         mean_anisotropy = np.mean(local_anisotropies)
     else:
-        mean_anisotropy = 'Nan'
+        mean_anisotropy = np.nan
 
     return mean_anisotropy
