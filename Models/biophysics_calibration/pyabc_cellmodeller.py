@@ -3,7 +3,8 @@ This is the main script that runs pyabc and CellModeller.
 
 Instructions:
 1. Set cellmodeller_module to the name of the simulation module (e.g., Tutorial1a.py)
-2. Set max_cells to the number of cells where the simulation will end
+2. In the main function, set max_cells to the number of cells where the simulation will end, or,
+    set max_time to the simulation time where the simulation will end
 3. Set the summary statistics to calculate in the model() function
 4. Define the ABC calibration settings in the main function
 5. Set experimental values for summary statistics in the main function;
@@ -35,21 +36,33 @@ sys.path.append(os.path.join(os.path.expanduser('~'), 'CellModeller-ingallslab/S
 import helperFunctions
 
 cellmodeller_module = "simulation_module.py"  
-max_cells = 1000
 
 def model(parameters):
+    """
+    The "model" run by pyabc. Every time a simulation is run, the following occurs:
+    1. Create a unique export path
+    2. Run simulation and store data in export path
+    3. Calculate and return summary statistics from the simulation
+    
+    The function must only have "parameters" as an argument to conform to pyabc's framework. 
+    
+    @param  parameters      dict of parameters specified in the prior distributions
+    @return summary_stats   dict of calculated summary statistics
+    """
+    global max_cells
+    global max_time
     # Defining input/output locations
     export_path = "data/" + str(uuid.uuid4())
     sys.stdout = open(os.devnull, 'w') # Disable printing from simulations
     
     # Run CellModeller simulation
-    simulate(cellmodeller_module, parameters, export_path)
+    simulate(cellmodeller_module, parameters, export_path, max_cells=max_cells, max_time=max_time)
     sys.stdout = sys.__stdout__ # Re-enable printing
     print("Simulation completed")
     
     # Load cellStates
-    pickle_list = helperFunctions.create_pickle_list(export_path)
-    cells = helperFunctions.load_cellStates(export_path, pickle_list[-1]) # load last pickle file
+    pickle_list = helperFunctions.create_pickle_list_full_path(export_path)
+    cells = helperFunctions.load_cellStates_full_path(pickle_list[-1]) # load last pickle file
     
     # Extract time parameters from simulation (could hard-code to avoid unnecessary repetition)
     sim_file = os.path.abspath(cellmodeller_module)
@@ -57,10 +70,10 @@ def model(parameters):
     
     # Calculate summary statistics
     summary_stats = {}
-    summary_stats['growth_rate_vs_centroid'] = growth_rate_analysis.main(cells, dt)
-    summary_stats['density_parameter'] = density_calculation.main(cells)
-    summary_stats['order_parameter'] = anisotropy.main(cells)
-    summary_stats['aspect_ratio'] = aspect_ratio.main(cells)
+    summary_stats['growth_rate_vs_centroid'] = growth_rate_analysis.get_growth_rate_vs_position_parameter(cells, dt)
+    summary_stats['density_parameter'] = density_calculation.get_density_parameter(cells)
+    summary_stats['order_parameter'] = anisotropy.get_global_order_parameter(cells)
+    summary_stats['aspect_ratio'] = aspect_ratio.get_aspect_ratio(cells)
     
     # Write summary stats to file for convenience (optional) 
     file = open(export_path + "/summary_stats.txt","w")
@@ -70,13 +83,15 @@ def model(parameters):
 
     return summary_stats
 
-def simulate(modfilename, params, export_path):
+def simulate(modfilename, params, export_path, max_cells=None, max_time=None):
     """
     Same as batch.py with modificationsto allow external parameters and termination based on stepNum
     
     @param modfilename  module name (e.g., "Tutorial1.py")
     @param export_path  output directory name
     @param params       dictionary of parameter values passed to the simulation
+    @param max_cells    number of cells where simulation terminates (int)
+    @param max_time     simulation time where simulation terminates (float)
     """
     # Get module file name and append module to system path
     (path,name) = os.path.split(modfilename)
@@ -87,10 +102,18 @@ def simulate(modfilename, params, export_path):
     sim_file = os.path.abspath(modfilename)
     dt = sim_time_parameters(sim_file)
     
-    # Run simulation
+    # Create Simulator object
     sim = Simulator(modname, dt, saveOutput=True, outputDirName=export_path, psweep=True, params=params)
-    while len(sim.cellStates) <= max_cells:
-        sim.step()
+    
+    # Run simulation and terminate when simulation reaches a certain number of cells
+    if max_cells:
+        while len(sim.cellStates) <= max_cells:
+            sim.step()
+    
+    # Run simulation and terminate when simulation time reaches max_time    
+    if max_time:
+        while sim.stepNum*dt <= sim_time:
+            sim.step()
         
     # Export pickle at final timestep
     sim.writePickle()
@@ -127,6 +150,10 @@ def distance_calculation(sim_stats, exp_stats):
     return distance    
     
 if __name__ == '__main__':
+    # Define simulation termination condition; keep undesired option as None
+    max_cells = 500
+    max_time = None
+
     # Define ABC-SMC settings
     n_cores = 8
     population_size = 10
