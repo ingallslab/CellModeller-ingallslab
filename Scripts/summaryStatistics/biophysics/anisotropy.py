@@ -52,7 +52,7 @@ def get_order_parameter(cell_angles):
     
     return order_parameter
     
-def main(cells):
+def get_global_order_parameter(cells):
     """
     The main function for calculating anisotropy
     @param  cells           cellStates dict
@@ -63,16 +63,3 @@ def main(cells):
     order_parameter = get_order_parameter(angles)
     
     return order_parameter
-    
-if __name__ == "__main__":
-    """
-    For testing purposes
-    """
-    # Import data
-    pickle_full_path = 'step-00420.pickle'
-    data = pickle.load(open(pickle_full_path, 'rb'))
-    cells = data['cellStates']   
-       
-    # Run calculation
-    order_parameter = main(cells)
-    print(order_parameter)

@@ -15,6 +15,12 @@ from sklearn.linear_model import LinearRegression
 
 # Local/custom modules
 from lje.src.lownerJohnEllipse import plot_ellipse, welzl
+
+"""
+TODO: 
+1. Test fitting to a scatter plot instead of binned data
+2. Try using distance to colony edge rather than colony centroid
+"""
    
 def get_radial_position(cell, centerX, centerY):
     """
@@ -92,11 +98,12 @@ def filter_by_cell_age(cells, min_age=2):
     @param  min_age             minimum age to include cell in the filtered list; recommended age is 2
     @return filtered_cellstates cellStates dict with cells filtered by age
     """
+    
     filtered_cellstates = {}
     for i, cell in cells.items():
         if cell.cellAge >= min_age:
             filtered_cellstates[i] = cell
-    
+
     return filtered_cellstates
     
 def get_all_centroids(cells):
@@ -157,7 +164,7 @@ def find_knee(x, y, curvature_type="convex", direction_type="increasing"):
     
     return knee
     
-def fit_line(x, y):
+def perform_linear_regression(x, y):
     """
     Fit a line to [x, y] data. Get regression coefficients and R^2.
     
@@ -180,7 +187,7 @@ def fit_line(x, y):
     
     return slope, intercept, r_squared
     
-def main(cells, dt, bin_radius=4):
+def get_growth_rate_vs_position_parameter(cells, dt, bin_radius=4):
     """
     The main function.
     Calculates the slope of growth_rate vs. radial cell position in the colony in growth portions of the colony.
@@ -228,20 +235,6 @@ def main(cells, dt, bin_radius=4):
     growth_rate_linear = mean_df['Growth Rate'].to_numpy()[knee_index:]
     
     # Fit line
-    slope, intercept, r_squared = fit_line(bin_ranges_linear, growth_rate_linear)
+    slope, intercept, r_squared = perform_linear_regression(bin_ranges_linear, growth_rate_linear)
     
     return slope
-
-if __name__ == "__main__":
-    '''
-    For testing purposes only
-    '''
-    dt = 0.02
-    
-    # Load cellStates
-    pickle_full_path = 'step-00420.pickle'
-    data = pickle.load(open(pickle_full_path, 'rb'))
-    cells = data['cellStates']   
-    
-    slope = main(cells, dt)
-    print(slope)
