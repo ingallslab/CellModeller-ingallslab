@@ -6,17 +6,19 @@ from DataAnalysis import data_analysis
 
 if __name__ == '__main__':
     # cellprofiler output pickle files
-    input_directory = '../input files/CellProfiler_Sample'
+    # input_directory = '../input files/CellProfiler_Sample'
     #  cellModeller output pickle files
-    # input_directory = '../input files/CellModeller_Sample'
+    input_directory = '../input files/CellModeller_Sample'
 
-    summary_statistic_method_list = ["Aspect Ratio", "Anisotropy", 'Density', 'dist_vs_growth_rate']
+    summary_statistic_method_list = ["Aspect Ratio", "Anisotropy", "fractal dimension"]
     dt = 0.05  # interval time: 3 min
+    # useful for calculation of fractal dimension
+    fig_export_path = 'fig/sim/'
 
     # optional arguments
     # 1. mode: local (calculate for each micro colony) or global(calculate over time lapse without considering
     # micro-colonies) (default: 'global')
-    mode = 'local'
+    mode = 'global'
 
     # 2. minimum size of micro colony (unit: um - default: 2)
     min_size_of_micro_colony = 2
@@ -29,14 +31,16 @@ if __name__ == '__main__':
 
     # result: mean_summary_statistic_report = {summary statistic name: mean value, ....}
     # local summary statistics
+    '''
     local_mean_summary_statistic_report = data_analysis(input_directory, summary_statistic_method_list, dt,
                                                         mode, max_distance_between_cells, um_pixel_ratio,
-                                                        min_size_of_micro_colony)
+                                                        min_size_of_micro_colony, fig_export_path)
+    '''
     # global summary statistics
     global_mean_summary_statistic_report = data_analysis(input_directory, summary_statistic_method_list, dt, mode,
-                                                         max_distance_between_cells, um_pixel_ratio)
+                                                         max_distance_between_cells, um_pixel_ratio, fig_export_path)
     # mean value of each summary statistic
-    print('local mode:')
-    print(local_mean_summary_statistic_report)
+    #print('local mode:')
+    #print(local_mean_summary_statistic_report)
     print('global mode:')
     print(global_mean_summary_statistic_report)
