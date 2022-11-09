@@ -8,6 +8,7 @@ from scipy.spatial import distance_matrix
 import CellModeller
 import ProcessCellProfilerData
 from summary_statistics import fit_ellipse, aspect_ratio_calc, anisotropy_calc
+from fractal_dimension import calc_fractal_dimension
 import density_calculation
 import growth_rate_stats
 
@@ -80,7 +81,7 @@ def make_adjacency_matrix(cs, max_distance_between_cells):
 
 
 def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, min_size_of_micro_colony,
-                          max_distance_between_cells, um_pixel_ratio):
+                          max_distance_between_cells, um_pixel_ratio, fig_export_path):
     """
     Goal: this is the main function; the function calls other function that are described above and
     calculates summary statistics for each micro colony in each time-step and store the outputs in a dictionary.
@@ -91,6 +92,7 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
     @param min_size_of_micro_colony int minimum size of micro colony
     @param max_distance_between_cells float There is a maximum distance between bacteria that can be neighbours.
     @param um_pixel_ratio float  convert um to pixel (requires for calculation of density summary statistic)
+    @param fig_export_path directory to export images
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
@@ -102,6 +104,7 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
     anisotropy_list = []
     density_list = []
     dist_vs_growth_rate_list = []
+    fractal_dimension_list = []
 
     # read pickle files
     path = pickle_files_directory + "/*.pickle"
@@ -114,14 +117,17 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
 
         # store ellipses
         ellipses = []
-        # store anisotropies of micro colonies of this rime step
+        # store anisotropies of micro colonies of this time step
         local_anisotropy_list = []
-        # store anisotropies of micro colonies of this rime step
+        # store anisotropies of micro colonies of this time step
         local_aspect_ratio_list = []
-        # store density of micro colonies of this rime step
+        # store density of micro colonies of this time step
         local_density_list = []
-        # store Correlate growth penalty based on location in micro colony of this rime step
+        # store Correlate growth penalty based on location in micro colony of this time step
         local_dist_vs_growth_rate_list = []
+        # store fractal dimension of this time step
+        local_fractal_dimension_list = []
+
         micro_colonies_in_current_time_step = []
 
         timestep = cnt + 1
@@ -200,7 +206,7 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
                     """
                     if "Density" in summary_statistic_method:
                         density = density_calculation.main(bacteria_in_this_micro_colony)
-                        # store anisotropy
+                        # store density
                         density_list.append(density)
                         local_density_list.append(density)
                     """
@@ -215,9 +221,23 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
                     # when at least three points are available
                     if "dist_vs_growth_rate" in summary_statistic_method and len(bacteria_in_this_micro_colony) > 2:
                         dist_vs_growth_rate = growth_rate_stats.main(bacteria_in_this_micro_colony, dt)
-                        # store anisotropy
+                        # store dist_vs_growth_rate
                         dist_vs_growth_rate_list.append(dist_vs_growth_rate)
                         local_dist_vs_growth_rate_list.append(dist_vs_growth_rate)
+                    """
+                        Finish
+                    """
+
+                    """
+                        calculation of fractal dimension in microcolony
+                    """
+                    if "fractal_dimension" in summary_statistic_method:
+                        fig_name = str(timestep) + '_' + str(sub_graph_index)
+                        fractal_dimension = calc_fractal_dimension(bacteria_in_this_micro_colony, fig_export_path,
+                                                                   fig_name)
+                        # store fractal dimension
+                        fractal_dimension_list.append(fractal_dimension)
+                        local_fractal_dimension_list.append(fractal_dimension)
                     """
                         Finish
                     """
@@ -235,11 +255,14 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
         # remove nan values
         dist_vs_growth_rate_list = [x for x in dist_vs_growth_rate_list if str(x) != 'nan']
         report_mean_summary_statistics["dist_vs_growth_rate"] = np.mean(dist_vs_growth_rate_list)
+    if "fractal dimension" in summary_statistic_method:
+        report_mean_summary_statistics["fractal dimension"] = np.mean(fractal_dimension_list)
 
     return report_mean_summary_statistics
 
 
-def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_distance_between_cells, um_pixel_ratio):
+def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_distance_between_cells, um_pixel_ratio,
+                    fig_export_path):
     """
     Goal: this is the main function; the function calls other functions described above and
     calculates summary statistics for each time-step and store the outputs in a dictionary.
@@ -249,6 +272,7 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
     @param dt float interval time
     @param max_distance_between_cells float There is a maximum distance between bacteria that can be neighbours.
     @param um_pixel_ratio float  convert um to pixel (requires for calculation of density summary statistic)
+    @param  fig_export_path directory to export images
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
@@ -260,6 +284,7 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
     anisotropy_list = []
     density_list = []
     dist_vs_growth_rate_list = []
+    fractal_dimension_list = []
 
     # read pickle files
     path = pickle_files_directory + "/*.pickle"
@@ -314,15 +339,28 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
         """
 
         """
-           calculation of Correlate growth penalty based on location in microcolony
+           calculation of Correlate growth penalty based on location 
         """
         # Note that this summary stat currently is calc. only for time steps containing more than 2 bacteria
         # because the center of the bacteria is used to fit ellipse but the ellipse can be fitted when at
         # least three points are available
         if "dist_vs_growth_rate" in summary_statistic_method and len(cs) > 2:
             dist_vs_growth_rate = growth_rate_stats.main(cs, dt)
-            # store anisotropy
+            # store dist_vs_growth_rate
             dist_vs_growth_rate_list.append(dist_vs_growth_rate)
+        """
+           Finish
+        """
+
+        """
+           calculation of fractal dimension
+        """
+        if "fractal dimension" in summary_statistic_method:
+            # image name
+            fig_name = str(timestep)
+            fractal_dimension = calc_fractal_dimension(cs, fig_export_path, fig_name)
+            # store fractal dimension
+            fractal_dimension_list.append(fractal_dimension)
         """
            Finish
         """
@@ -340,12 +378,14 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
         # remove nan values
         dist_vs_growth_rate_list = [x for x in dist_vs_growth_rate_list if str(x) != 'nan']
         report_mean_summary_statistics["dist_vs_growth_rate"] = np.mean(dist_vs_growth_rate_list)
+    if "fractal dimension" in summary_statistic_method:
+        report_mean_summary_statistics["fractal dimension"] = np.mean(fractal_dimension_list)
 
     return report_mean_summary_statistics
 
 
 def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='global', max_distance_between_cells=3.4,
-                  um_pixel_ratio=0.144, min_size_of_micro_colony=2):
+                  um_pixel_ratio=0.144, min_size_of_micro_colony=2, fig_export_path=''):
     """
     goal: calculation of summary statistics in global or local mode
     @param pickle_files_directory str directory of simulation / experimental pickle files
@@ -355,6 +395,7 @@ def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='gl
     @param max_distance_between_cells float There is a maximum distance between bacteria that can be neighbours.
     @param um_pixel_ratio float  convert um to pixel (requires for calculation of density summary statistic)
     @param min_size_of_micro_colony int minimum size of micro colony (only for local mode)
+    @param  fig_export_path directory to export images
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
@@ -365,7 +406,7 @@ def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='gl
 
     if mode == 'local':
         return micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, min_size_of_micro_colony,
-                                     max_distance_between_cells, um_pixel_ratio)
+                                     max_distance_between_cells, um_pixel_ratio, fig_export_path)
     elif mode == 'global':
         return global_analysis(pickle_files_directory, summary_statistic_method, dt, max_distance_between_cells,
-                               um_pixel_ratio)
+                               um_pixel_ratio, fig_export_path)
