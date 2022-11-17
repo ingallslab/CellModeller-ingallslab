@@ -36,11 +36,15 @@ def convert_cellmodeller_orientation_to_radians(cell_dir):
     cell_dir_unit_vector = cell_dir/magnitude
     
     # Calculate orientation in radians
-    orientation = np.arctan(cell_dir_unit_vector[1]/cell_dir_unit_vector[0])
+    try:
+        orientation = np.arctan(cell_dir_unit_vector[1]/cell_dir_unit_vector[0])
+    except:
+        # If x component is zero, cell is straight up
+        orientation = math.pi/2
     
     return orientation
     
-def get_cell_data_to_draw_image_bw(cells, um_pixel_ratio=0.144):
+def get_cell_data_to_draw_image_bw(cells, um_pixel_ratio):
     """
     Convert CellModeller data into a format suitable for drawing black/white images
     
@@ -89,10 +93,11 @@ def get_image_dimensions(cell_centers_x, cell_centers_y):
     @param  cell_centers_y  list or nparray of y-coordinates for cell centroids
     @return img_dimensions  (width, height)
     """
-    min_x = min(cell_centers_x) - 5
-    max_x = max(cell_centers_x) + 5
-    min_y = min(cell_centers_y) - 5
-    max_y = max(cell_centers_y) + 5
+    extra_border = 5
+    min_x = min(cell_centers_x) - extra_border
+    max_x = max(cell_centers_x) + extra_border
+    min_y = min(cell_centers_y) - extra_border
+    max_y = max(cell_centers_y) + extra_border
     width = abs(max_x) + abs(min_x)
     height = abs(max_y) + abs(min_y)
     img_dimensions = (round(width), round(height))
@@ -203,7 +208,7 @@ def calculate_colony_density(img, fig_export_path=''):
     
     return density
     
-def main(cells, fig_export_path=''):
+def get_density_parameter(cells, um_pixel_ratio=0.144, fig_export_path=''):
     """
     The main function for calculating colony density
     
@@ -212,7 +217,7 @@ def main(cells, fig_export_path=''):
     @return density         colony density parameter (1 = colony is completely filled in)
     """
     # Obtain cell data in format suitable for creating black/white images
-    cell_centers_x, cell_centers_y, cell_lengths, cell_radii, cell_orientations = get_cell_data_to_draw_image_bw(cells, um_pixel_ratio=0.144)    
+    cell_centers_x, cell_centers_y, cell_lengths, cell_radii, cell_orientations = get_cell_data_to_draw_image_bw(cells, um_pixel_ratio)    
             
     # Create image dimensions
     img_dimensions = get_image_dimensions(cell_centers_x, cell_centers_y)
@@ -221,19 +226,6 @@ def main(cells, fig_export_path=''):
     bw_img = draw_image_bw(img_dimensions, cell_centers_x, cell_centers_y, cell_lengths, cell_radii, cell_orientations)
     
     # Define export path and compute colony density
-    export_path = 'data/'
-    density = calculate_colony_density(bw_img, fig_export_path=export_path)    
+    density = calculate_colony_density(bw_img, fig_export_path=fig_export_path)    
     
-    return density
-    
-if __name__ == '__main__':    
-    '''
-    For testing purposes only
-    '''
-    # Load cellStates
-    pickle_full_path = 'step-00420.pickle'
-    data = pickle.load(open(pickle_full_path, 'rb'))
-    cells = data['cellStates']   
-    
-    density = main(cells)
-    print(density)    
+    return density 
