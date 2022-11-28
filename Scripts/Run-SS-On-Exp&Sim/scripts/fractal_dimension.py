@@ -1,12 +1,15 @@
-from scipy.spatial import ConvexHull
+import cv2
+from PIL import Image, ImageDraw
+import skimage.morphology, skimage.measure
 import imageio
 import numpy as np
 import matplotlib.pyplot as plt
 from FractalDimension.MBdimension import fractal_dimension
 import cell_data
+from density_calculation import get_cell_data_to_draw_image_bw, get_image_dimensions, draw_image_bw
 
 
-def save_fig(cells, hull, points, fig_export_path, fig_name):
+def save_fig(cells, fig_export_path, fig_name):
     """
     @param cells cellStates dict
     @param hull object convex hull
@@ -16,41 +19,28 @@ def save_fig(cells, hull, points, fig_export_path, fig_name):
 
     """
     # vertexes
-    vertex1_x, vertex1_y, vertex2_x, vertex2_y = cell_data.find_vertex(cells)
-    minor = cell_data.find_bacteria_minor(cells)
+    cell_centers_x, cell_centers_y, cell_lengths, cell_radii, cell_orientations = \
+        get_cell_data_to_draw_image_bw(cells, um_pixel_ratio=0.144)
 
-    fig, ax = plt.subplots()
-    for i in range(len(minor)):
-        plt.plot([vertex1_x[i], vertex2_x[i]], [vertex1_y[i], vertex2_y[i]], lw=minor[i], solid_capstyle="round")
-    for simplex in hull.simplices:
-        plt.plot(points[simplex, 0], points[simplex, 1], 'k-')
+    # Create image dimensions
+    img_dimensions = get_image_dimensions(cell_centers_x, cell_centers_y)
 
-    fig.savefig(fig_export_path + fig_name + ".png")
-    # close fig
-    fig.clf()
-    plt.close()
+    # Draw black and white image
+    bw_img = draw_image_bw(img_dimensions, cell_centers_x, cell_centers_y, cell_lengths, cell_radii, cell_orientations)
 
-    # fills area
-    fig, ax = plt.subplots()
-    plt.fill(points[hull.vertices, 0], points[hull.vertices, 1], 'k')
-    fig.savefig(fig_export_path + fig_name + "_fill.png")
-    # close fig
-    fig.clf()
-    plt.close()
+    # part of `calculate_colony_density` function
 
+    # Perform morphological closing to get rid of any gaps
+    img_close = skimage.morphology.closing(bw_img, footprint=np.ones((7, 7), dtype='uint8'))
 
-def create_convex_hull(cells):
-    """
-    goal: find convex hull
-    @param cells cellStates dict
-    """
-    # find endpoints
-    endpoints_x, endpoints_y = cell_data.bacteria_end_points(cells)
+    # Get contours
+    contours, hierarchy = cv2.findContours(np.copy(img_close), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    points = np.column_stack((endpoints_x, endpoints_y))
-    hull = ConvexHull(points)
+    # Fill contours so that the image is a filled envelope of the microcolony
+    img_close = cv2.drawContours(img_close, contours, -1, 255, cv2.FILLED)
 
-    return hull, points
+    img_close_fromarray = Image.fromarray(img_close)
+    img_close_fromarray.save(fig_export_path + fig_name + "_fill.png")
 
 
 def calc_fractal_dimension(cells, fig_export_path, fig_name):
@@ -61,8 +51,7 @@ def calc_fractal_dimension(cells, fig_export_path, fig_name):
     @param fig_name image name
     @return fractal dimension
     """
-    hull, points = create_convex_hull(cells)
-    save_fig(cells, hull, points, fig_export_path, fig_name)
+    save_fig(cells, fig_export_path, fig_name)
     # Import the image in greyscale
     greyscale_img = imageio.v2.imread(fig_export_path + fig_name + '_fill.png', as_gray="True") / 255.0
     return fractal_dimension(greyscale_img)
