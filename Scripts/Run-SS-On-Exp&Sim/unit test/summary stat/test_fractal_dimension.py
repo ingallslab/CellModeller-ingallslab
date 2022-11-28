@@ -19,7 +19,7 @@ def sim_data():
 
 def exp_data():
     # tun on experimental data
-    exp_pickle_file = '../../input files/CellProfiler_Sample/step-000089.pickle'
+    exp_pickle_file = '../../input files/K12/step-000089.pickle'
     # read current pickle file
     exp_bacteria_info = pickle.load(open(exp_pickle_file, 'rb'))
     cs = exp_bacteria_info['cellStates']
