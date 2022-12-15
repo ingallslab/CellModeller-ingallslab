@@ -134,14 +134,21 @@ A function called setparams must be included in the module file, and the paramet
         self.dataOutputInitialised = False
         self.outputDirName = outputDirName
         self.setSaveOutput(saveOutput)
+<<<<<<< HEAD
 
         # Call the user-defined setup function on ourself
         self.module.setup(self)
 
+=======
+        
+>>>>>>> 20400c9... Implement adhesion module
         # Set model parameters if doing a parametric sweep
         if self.psweep == True:
             self.module.setparams(params)
-
+            
+        # Call the user-defined setup function on ourself
+        self.module.setup(self)
+       
     def setSaveOutput(self, save):
         self.saveOutput = save
         if save and (not self.dataOutputInitialised):
@@ -393,12 +400,13 @@ A function called setparams must be included in the module file, and the paramet
         del self.cellStates[cid]
 
     ## Add a new cell to the simulator
-    def addCell(self, cellType=0, cellAdh=0, length=3.5, **kwargs):
+    def addCell(self, cellType=0, cellAdh=0, cellForce=(0,0,0,0), length=3.5, **kwargs):
         cid = self.next_id()
         cs = CellState(cid)
         cs.length = length
         cs.cellType = cellType
         cs.cellAdh = cellAdh
+        cs.cellForce = cellForce
         cs.idx = self.next_idx()
         # add new label to next cell family tree
         cs.label = self.next_label()
