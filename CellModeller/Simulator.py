@@ -134,14 +134,7 @@ A function called setparams must be included in the module file, and the paramet
         self.dataOutputInitialised = False
         self.outputDirName = outputDirName
         self.setSaveOutput(saveOutput)
-<<<<<<< HEAD
 
-        # Call the user-defined setup function on ourself
-        self.module.setup(self)
-
-=======
-        
->>>>>>> 20400c9... Implement adhesion module
         # Set model parameters if doing a parametric sweep
         if self.psweep == True:
             self.module.setparams(params)
