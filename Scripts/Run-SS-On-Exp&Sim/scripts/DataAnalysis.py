@@ -8,9 +8,8 @@ from scipy.spatial import distance_matrix
 import CellModeller
 import ProcessCellProfilerData
 from summary_statistics import fit_ellipse, aspect_ratio_calc, anisotropy_calc
-from fractal_dimension import calc_fractal_dimension
-import density_calculation
-import growth_rate_stats
+from density_calculation import calc_density
+from growth_rate_stats import calc_dist_vs_growth_rate
 
 # set number of recursion
 sys.setrecursionlimit(10000)
@@ -80,19 +79,78 @@ def make_adjacency_matrix(cs, max_distance_between_cells):
     return adjacency_matrix
 
 
+def func_current_bacteria_info(cs, dt):
+    """
+    Goal: This function retrieves and/or calculates important features of bacteria ( it can be from sim. or exp.)
+          in a specific time step and stores them in a dataframe.
+          It can be used to check whether bacteria micro colonies have merged, fit an ellipse around micro colonies,
+          and calculate summary statistics.
+          These features includes:
+          'id', 'label', 'minor', 'major', 'x_end_point1', 'y_end_point1', 'x_end_point2', 'y_end_point2',
+                    'orientation', 'x_center', 'y_center', 'cell_age', 'growth_rate'
+    @param cs: dictionary  bacteria features value
+    @param  dt: float  interval time
+    Return: df_current_time_step  dataframe   Values of important features of bacteria in a dataframe
+    """
+    # get important features of bacteria to draw them
+    bacteria_id_in_current_timestep = [cs[it].id for it in cs]
+    bacteria_label_in_current_timestep = [cs[it].label for it in cs]
+    bacteria_minor_in_current_timestep = [cs[it].radius for it in cs]
+    bacteria_major_in_current_timestep = [cs[it].length for it in cs]
+    # end points of bacteria
+    bacteria_first_end_points_x_in_current_timestep = [cs[it].ends[0][0] for it in cs]
+    bacteria_first_end_points_y_in_current_timestep = [cs[it].ends[0][1] for it in cs]
+    bacteria_second_end_points_x_in_current_timestep = [cs[it].ends[1][0] for it in cs]
+    bacteria_second_end_points_y_in_current_timestep = [cs[it].ends[1][1] for it in cs]
+    # orientation
+    # direction vector: [x, y] --> orientation: arctan (y / x)
+    bacteria_orientation_in_current_time_step = [np.arctan2(cs[it].dir[1], cs[it].dir[0]) for it in cs if cs]
+
+    # center position
+    bacteria_x_center_in_current_timestep = [cs[it].pos[0] for it in cs]
+    bacteria_y_center_in_current_timestep = [cs[it].pos[1] for it in cs]
+
+    # cell age
+    bacteria_cell_age_in_current_timestep = [cs[it].cellAge for it in cs]
+
+    # growth rate
+    strainRate_rolling = [cs[it].strainRate_rolling for it in cs]
+    strainRate_rolling = [np.nan if x == 'nan' else x for x in strainRate_rolling]
+    bacteria_growth_rate_in_current_timestep = [element / dt for element in strainRate_rolling]
+
+    # convert to dataframe
+    bacteria_info = list(zip(bacteria_id_in_current_timestep,
+                             bacteria_label_in_current_timestep,
+                             bacteria_minor_in_current_timestep,
+                             bacteria_major_in_current_timestep,
+                             bacteria_first_end_points_x_in_current_timestep,
+                             bacteria_first_end_points_y_in_current_timestep,
+                             bacteria_second_end_points_x_in_current_timestep,
+                             bacteria_second_end_points_y_in_current_timestep,
+                             bacteria_orientation_in_current_time_step,
+                             bacteria_x_center_in_current_timestep,
+                             bacteria_y_center_in_current_timestep,
+                             bacteria_cell_age_in_current_timestep,
+                             bacteria_growth_rate_in_current_timestep))
+
+    columns_name = ['id', 'label', 'minor', 'major', 'x_end_point1', 'y_end_point1', 'x_end_point2', 'y_end_point2',
+                    'orientation', 'x_center', 'y_center', 'cell_age', 'growth_rate']
+    df_current_time_step = pd.DataFrame(bacteria_info, columns=columns_name)
+
+    return df_current_time_step
+
+
 def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, min_size_of_micro_colony,
-                          max_distance_between_cells, um_pixel_ratio, fig_export_path):
+                          max_distance_between_cells, um_pixel_ratio):
     """
     Goal: this is the main function; the function calls other function that are described above and
     calculates summary statistics for each micro colony in each time-step and store the outputs in a dictionary.
-
     @param pickle_files_directory str directory of simulation / experimental pickle files
     @param summary_statistic_method   str     the method that we apply on the micro-colonies
     @param dt float interval time
     @param min_size_of_micro_colony int minimum size of micro colony
     @param max_distance_between_cells float There is a maximum distance between bacteria that can be neighbours.
     @param um_pixel_ratio float  convert um to pixel (requires for calculation of density summary statistic)
-    @param fig_export_path directory to export images
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
@@ -104,7 +162,6 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
     anisotropy_list = []
     density_list = []
     dist_vs_growth_rate_list = []
-    fractal_dimension_list = []
 
     # read pickle files
     path = pickle_files_directory + "/*.pickle"
@@ -117,17 +174,14 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
 
         # store ellipses
         ellipses = []
-        # store anisotropies of micro colonies of this time step
+        # store anisotropies of micro colonies of this rime step
         local_anisotropy_list = []
-        # store anisotropies of micro colonies of this time step
+        # store anisotropies of micro colonies of this rime step
         local_aspect_ratio_list = []
-        # store density of micro colonies of this time step
+        # store density of micro colonies of this rime step
         local_density_list = []
-        # store Correlate growth penalty based on location in micro colony of this time step
+        # store Correlate growth penalty based on location in micro colony of this rime step
         local_dist_vs_growth_rate_list = []
-        # store fractal dimension of this time step
-        local_fractal_dimension_list = []
-
         micro_colonies_in_current_time_step = []
 
         timestep = cnt + 1
@@ -146,11 +200,15 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
         # finding sub-graphs
         sub_graphs = finding_sub_graphs(graph)
 
+        # get important features of bacteria
+        df_current_time_step = func_current_bacteria_info(cs, dt)
+
         for sub_graph_index, subgraph in enumerate(sub_graphs):
             if len(subgraph) >= min_size_of_micro_colony:
                 subgraph_nodes = list(subgraph)
-                # find unique bacteria
-                subgraph_bacteria_label = list(set([cs[it].label for it in subgraph_nodes]))
+                # find unique bacteria labels
+                subgraph_bacteria_label = list(set(df_current_time_step[df_current_time_step["id"].isin(subgraph_nodes)]
+                                                   ["label"].values.tolist()))
 
                 intersection_list = [(mico_colony_index, np.intersect1d(subgraph_bacteria_label, micro_colony)) for
                                      mico_colony_index, micro_colony in enumerate(micro_colonies)]
@@ -169,11 +227,12 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
                     # store micro colony bacteria id
                     micro_colonies_in_current_time_step.append(subgraph_nodes)
 
-                    # features value of bacteria in this micro colony
-                    bacteria_in_this_micro_colony = {k: v for k, v in cs.items() if k in subgraph_nodes}
+                    # create dataframe
+                    bacteria_in_this_micro_colony_df = df_current_time_step[
+                        df_current_time_step["id"].isin(subgraph_nodes)].reset_index(drop=True)
 
                     # fit ellipse
-                    ellipse_params = fit_ellipse(bacteria_in_this_micro_colony)
+                    ellipse_params = fit_ellipse(bacteria_in_this_micro_colony_df)
                     # append ellipse
                     ellipses.append(ellipse_params)
 
@@ -193,7 +252,7 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
                         calculation of Anisotropy
                     """
                     if "Anisotropy" in summary_statistic_method:
-                        mean_anisotropy = anisotropy_calc(bacteria_in_this_micro_colony, max_distance_between_cells)
+                        mean_anisotropy = anisotropy_calc(bacteria_in_this_micro_colony_df, max_distance_between_cells)
                         # store anisotropy
                         anisotropy_list.append(mean_anisotropy)
                         local_anisotropy_list.append(mean_anisotropy)
@@ -205,8 +264,8 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
                         calculation of Density
                     """
                     if "Density" in summary_statistic_method:
-                        density = density_calculation.main(bacteria_in_this_micro_colony)
-                        # store density
+                        density = calc_density(bacteria_in_this_micro_colony_df, um_pixel_ratio)
+                        # store anisotropy
                         density_list.append(density)
                         local_density_list.append(density)
                     """
@@ -216,28 +275,11 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
                     """
                         calculation of Correlate growth penalty based on location in microcolony
                     """
-                    # Note that this summary stat currently is calc. only for micro colonies containing more than 2
-                    # bacteria because the center of the bacteria is used to fit ellipse but the ellipse can be
-                    # when at least three points are available
-                    if "dist_vs_growth_rate" in summary_statistic_method and len(bacteria_in_this_micro_colony) > 2:
-                        dist_vs_growth_rate = growth_rate_stats.main(bacteria_in_this_micro_colony, dt)
-                        # store dist_vs_growth_rate
+                    if "dist_vs_growth_rate" in summary_statistic_method:
+                        dist_vs_growth_rate = calc_dist_vs_growth_rate(bacteria_in_this_micro_colony_df)
+                        # store anisotropy
                         dist_vs_growth_rate_list.append(dist_vs_growth_rate)
                         local_dist_vs_growth_rate_list.append(dist_vs_growth_rate)
-                    """
-                        Finish
-                    """
-
-                    """
-                        calculation of fractal dimension in microcolony
-                    """
-                    if "fractal_dimension" in summary_statistic_method:
-                        fig_name = str(timestep) + '_' + str(sub_graph_index)
-                        fractal_dimension = calc_fractal_dimension(bacteria_in_this_micro_colony, fig_export_path,
-                                                                   fig_name)
-                        # store fractal dimension
-                        fractal_dimension_list.append(fractal_dimension)
-                        local_fractal_dimension_list.append(fractal_dimension)
                     """
                         Finish
                     """
@@ -255,28 +297,22 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
         # remove nan values
         dist_vs_growth_rate_list = [x for x in dist_vs_growth_rate_list if str(x) != 'nan']
         report_mean_summary_statistics["dist_vs_growth_rate"] = np.mean(dist_vs_growth_rate_list)
-    if "fractal dimension" in summary_statistic_method:
-        report_mean_summary_statistics["fractal dimension"] = np.mean(fractal_dimension_list)
 
     return report_mean_summary_statistics
 
 
-def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_distance_between_cells, um_pixel_ratio,
-                    fig_export_path):
+def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_distance_between_cells, um_pixel_ratio):
     """
     Goal: this is the main function; the function calls other functions described above and
     calculates summary statistics for each time-step and store the outputs in a dictionary.
-
     @param pickle_files_directory str directory of simulation / experimental pickle files
     @param summary_statistic_method   str     the method that we apply over time-lapse
     @param dt float interval time
     @param max_distance_between_cells float There is a maximum distance between bacteria that can be neighbours.
     @param um_pixel_ratio float  convert um to pixel (requires for calculation of density summary statistic)
-    @param  fig_export_path directory to export images
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
-
     """
 
     # store summary statistics over time-lapse (for each individual time-step)
@@ -284,7 +320,6 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
     anisotropy_list = []
     density_list = []
     dist_vs_growth_rate_list = []
-    fractal_dimension_list = []
 
     # read pickle files
     path = pickle_files_directory + "/*.pickle"
@@ -299,16 +334,19 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
         current_bacteria_info = pickle.load(open(filename_list[cnt], 'rb'))
         cs = current_bacteria_info['cellStates']
 
+        # get important features of bacteria
+        df_current_time_step = func_current_bacteria_info(cs, dt)
+
         # fit ellipse
         # if  number of bacteria < 2 : ellipse_params = `nan`
-        ellipse_params = fit_ellipse(cs)
+        ellipse_params = fit_ellipse(df_current_time_step)
 
         """
            calculation of aspect ratio
         """
         # if  number of bacteria < 2 : ellipse_params = `nan`
         # so: the aspect ratio can not be calculated
-        if "Aspect Ratio" in summary_statistic_method and len(cs) > 1:
+        if "Aspect Ratio" in summary_statistic_method and df_current_time_step.shape[0] > 1:
             aspect_ratio = aspect_ratio_calc(ellipse_params)
             # store aspect ratio
             aspect_ratio_list.append(aspect_ratio)
@@ -319,8 +357,8 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
         """
            calculation of Anisotropy
         """
-        if "Anisotropy" in summary_statistic_method and len(cs) > 1:
-            mean_anisotropy = anisotropy_calc(cs, max_distance_between_cells)
+        if "Anisotropy" in summary_statistic_method and df_current_time_step.shape[0] > 1:
+            mean_anisotropy = anisotropy_calc(df_current_time_step, max_distance_between_cells)
             # store anisotropy
             anisotropy_list.append(mean_anisotropy)
         """
@@ -331,7 +369,7 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
            calculation of Density
         """
         if "Density" in summary_statistic_method:
-            density = density_calculation.main(cs)
+            density = calc_density(df_current_time_step, um_pixel_ratio)
             # store anisotropy
             density_list.append(density)
         """
@@ -339,28 +377,12 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
         """
 
         """
-           calculation of Correlate growth penalty based on location 
+           calculation of Correlate growth penalty based on location in microcolony
         """
-        # Note that this summary stat currently is calc. only for time steps containing more than 2 bacteria
-        # because the center of the bacteria is used to fit ellipse but the ellipse can be fitted when at
-        # least three points are available
-        if "dist_vs_growth_rate" in summary_statistic_method and len(cs) > 2:
-            dist_vs_growth_rate = growth_rate_stats.main(cs, dt)
-            # store dist_vs_growth_rate
+        if "dist_vs_growth_rate" in summary_statistic_method:
+            dist_vs_growth_rate = calc_dist_vs_growth_rate(df_current_time_step)
+            # store anisotropy
             dist_vs_growth_rate_list.append(dist_vs_growth_rate)
-        """
-           Finish
-        """
-
-        """
-           calculation of fractal dimension
-        """
-        if "fractal dimension" in summary_statistic_method:
-            # image name
-            fig_name = str(timestep)
-            fractal_dimension = calc_fractal_dimension(cs, fig_export_path, fig_name)
-            # store fractal dimension
-            fractal_dimension_list.append(fractal_dimension)
         """
            Finish
         """
@@ -378,14 +400,12 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
         # remove nan values
         dist_vs_growth_rate_list = [x for x in dist_vs_growth_rate_list if str(x) != 'nan']
         report_mean_summary_statistics["dist_vs_growth_rate"] = np.mean(dist_vs_growth_rate_list)
-    if "fractal dimension" in summary_statistic_method:
-        report_mean_summary_statistics["fractal dimension"] = np.mean(fractal_dimension_list)
 
     return report_mean_summary_statistics
 
 
 def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='global', max_distance_between_cells=3.4,
-                  um_pixel_ratio=0.144, min_size_of_micro_colony=2, fig_export_path=''):
+                  um_pixel_ratio=0.144, min_size_of_micro_colony=2):
     """
     goal: calculation of summary statistics in global or local mode
     @param pickle_files_directory str directory of simulation / experimental pickle files
@@ -395,18 +415,15 @@ def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='gl
     @param max_distance_between_cells float There is a maximum distance between bacteria that can be neighbours.
     @param um_pixel_ratio float  convert um to pixel (requires for calculation of density summary statistic)
     @param min_size_of_micro_colony int minimum size of micro colony (only for local mode)
-    @param  fig_export_path directory to export images
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
-
     Returns:
-
     """
 
     if mode == 'local':
         return micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, min_size_of_micro_colony,
-                                     max_distance_between_cells, um_pixel_ratio, fig_export_path)
+                                     max_distance_between_cells, um_pixel_ratio)
     elif mode == 'global':
         return global_analysis(pickle_files_directory, summary_statistic_method, dt, max_distance_between_cells,
-                               um_pixel_ratio, fig_export_path)
+                               um_pixel_ratio)
