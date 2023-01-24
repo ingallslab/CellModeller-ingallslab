@@ -88,12 +88,9 @@ def func_current_bacteria_info(cs, dt):
           These features includes:
           'id', 'label', 'minor', 'major', 'x_end_point1', 'y_end_point1', 'x_end_point2', 'y_end_point2',
                     'orientation', 'x_center', 'y_center', 'cell_age', 'growth_rate'
-
     @param cs: dictionary  bacteria features value
     @param  dt: float  interval time
-
     Return: df_current_time_step  dataframe   Values of important features of bacteria in a dataframe
-
     """
     # get important features of bacteria to draw them
     bacteria_id_in_current_timestep = [cs[it].id for it in cs]
@@ -148,7 +145,6 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
     """
     Goal: this is the main function; the function calls other function that are described above and
     calculates summary statistics for each micro colony in each time-step and store the outputs in a dictionary.
-
     @param pickle_files_directory str directory of simulation / experimental pickle files
     @param summary_statistic_method   str     the method that we apply on the micro-colonies
     @param dt float interval time
@@ -178,13 +174,13 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
 
         # store ellipses
         ellipses = []
-        # store anisotropies of micro colonies of this rime step
+        # store anisotropies of micro colonies of this time step
         local_anisotropy_list = []
-        # store anisotropies of micro colonies of this rime step
+        # store anisotropies of micro colonies of this time step
         local_aspect_ratio_list = []
-        # store density of micro colonies of this rime step
+        # store density of micro colonies of this time step
         local_density_list = []
-        # store Correlate growth penalty based on location in micro colony of this rime step
+        # store Correlate growth penalty based on location in micro colony of this time step
         local_dist_vs_growth_rate_list = []
         micro_colonies_in_current_time_step = []
 
@@ -309,7 +305,6 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
     """
     Goal: this is the main function; the function calls other functions described above and
     calculates summary statistics for each time-step and store the outputs in a dictionary.
-
     @param pickle_files_directory str directory of simulation / experimental pickle files
     @param summary_statistic_method   str     the method that we apply over time-lapse
     @param dt float interval time
@@ -318,7 +313,6 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
-
     """
 
     # store summary statistics over time-lapse (for each individual time-step)
@@ -424,9 +418,7 @@ def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='gl
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
-
     Returns:
-
     """
 
     if mode == 'local':
