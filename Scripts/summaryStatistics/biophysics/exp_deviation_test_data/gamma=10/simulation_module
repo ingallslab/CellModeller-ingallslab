@@ -1,0 +1,92 @@
+import random
+from CellModeller.Regulation.ModuleRegulator import ModuleRegulator
+from CellModeller.Biophysics.BacterialModels.CLBacterium_reg_param import CLBacterium_reg_param
+from CellModeller.GUI import Renderers
+import numpy
+import math
+from scipy.stats import norm
+
+gamma = 10
+reg_param = 1/gamma
+
+# Physiological parameters
+growth_rate_mean = 1.37 #h^-1
+growth_rate_std = 0.32
+radius_mean = 0.45 #um
+div_length_mean = 5.35 #um
+div_length_std = 1.88
+
+sim_time = 100.0 #h
+dt = 0.025 #h
+
+def setup(sim):
+    # Set biophysics module
+    biophys = CLBacterium_reg_param(sim, jitter_z=False, max_cells=1000, reg_param=reg_param, gamma=gamma)
+
+    # Set up regulation module
+    regul = ModuleRegulator(sim, sim.moduleName)	
+    # Only biophys and regulation
+    sim.init(biophys, regul, None, None)
+ 
+    # Specify the initial cell and its location in the simulation
+    sim.addCell(cellType=0, pos=(0,0,0), dir=(1,0,0))
+
+    # Add some objects to draw the models
+    therenderer = Renderers.GLBacteriumRenderer(sim)
+    sim.addRenderer(therenderer)
+    
+    # Specify how often data is saved
+    sim.pickleSteps = 10
+    sim.dt = dt #h
+
+def init(cell):
+    # Specify mean and distribution of initial cell size
+    cell.targetVol = div_length_mean
+    # Specify growth rate of cells
+    cell.growthRate = growth_rate_mean
+    cell.color = (0.0,1.0,0.0)
+
+def update(cells):
+    #Iterate through each cell and flag cells that reach target size for division
+    for (id, cell) in cells.items():
+        if cell.cellAge >= 2:
+            normalized_growth = cell.strainRate/dt / cell.growthRate
+            cell.color = (0,normalized_growth,0)
+            
+        if cell.volume > cell.targetVol:
+            cell.divideFlag = True
+
+def divide(parent, d1, d2):
+    # Specify target cell size that triggers cell division
+    '''
+    d1.targetVol = max(parent.targetVol + 0.35*random.gauss(mu=0, sigma=div_length_std), 0)
+    d2.targetVol = max(parent.targetVol + 0.35*random.gauss(mu=0, sigma=div_length_std), 0)
+    d1.growthRate = max(parent.growthRate + 0.35*random.gauss(mu=0, sigma=growth_rate_std), 0)
+    d2.growthRate = max(parent.growthRate + 0.35*random.gauss(mu=0, sigma=growth_rate_std), 0)
+    '''
+    d1.targetVol = min(8, norm.rvs(
+                           loc = div_length_mean,
+                           scale = div_length_std
+                           )
+                       )
+    d2.targetVol = min(8, norm.rvs(
+                           loc = div_length_mean,
+                           scale = div_length_std
+                           )
+                       )       
+    d1.growthRate = min(2, norm.rvs(
+                           loc = growth_rate_mean,
+                           scale = growth_rate_std
+                           )
+                       )         
+    d1.growthRate = min(2, norm.rvs(
+                           loc = growth_rate_mean,
+                           scale = growth_rate_std
+                           )
+                       )
+    
+def setparams(param_dict):
+    global gamma, reg_param
+    gamma = param_dict['gamma']
+    reg_param = param_dict['reg_param']
+
