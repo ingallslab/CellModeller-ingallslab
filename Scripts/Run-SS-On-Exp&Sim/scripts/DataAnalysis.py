@@ -174,13 +174,13 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
 
         # store ellipses
         ellipses = []
-        # store anisotropies of micro colonies of this rime step
+        # store anisotropies of micro colonies of this time step
         local_anisotropy_list = []
-        # store anisotropies of micro colonies of this rime step
+        # store anisotropies of micro colonies of this time step
         local_aspect_ratio_list = []
-        # store density of micro colonies of this rime step
+        # store density of micro colonies of this time step
         local_density_list = []
-        # store Correlate growth penalty based on location in micro colony of this rime step
+        # store Correlate growth penalty based on location in micro colony of this time step
         local_dist_vs_growth_rate_list = []
         micro_colonies_in_current_time_step = []
 
