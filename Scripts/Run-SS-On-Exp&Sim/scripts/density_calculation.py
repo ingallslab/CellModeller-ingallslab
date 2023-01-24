@@ -37,7 +37,10 @@ def convert_cellmodeller_orientation_to_radians(cell_dir):
     cell_dir_unit_vector = cell_dir / magnitude
 
     # Calculate orientation in radians
-    orientation = np.arctan(cell_dir_unit_vector[1] / cell_dir_unit_vector[0])
+    if cell_dir_unit_vector[0] != 0:
+        orientation = np.arctan(cell_dir_unit_vector[1] / cell_dir_unit_vector[0])
+    else:
+        orientation = np.pi / 2
 
     return orientation
 
