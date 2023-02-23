@@ -12,7 +12,7 @@ if __name__ == '__main__':
 
     summary_statistic_method_list = ["Aspect Ratio", "Anisotropy", "fourier_descriptor"]
     dt = 0.05  # interval time: 3 min
-    # useful for calculation of fractal dimension
+    # useful for calculation of fractal dimension (optional)
     fig_export_path = 'fig/sim/'
 
     # optional arguments
