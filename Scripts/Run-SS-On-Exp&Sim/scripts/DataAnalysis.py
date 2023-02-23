@@ -241,65 +241,42 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
                     # append ellipse
                     ellipses.append(ellipse_params)
 
-                    """
-                                calculation of aspect ratio
-                    """
+                    # calculation of aspect ratio
                     if "Aspect Ratio" in summary_statistic_method:
                         aspect_ratio = aspect_ratio_calc(ellipse_params)
                         # store aspect ratio
                         aspect_ratio_list.append(aspect_ratio)
                         local_aspect_ratio_list.append(aspect_ratio)
-                    """
-                                Finish
-                    """
 
-                    """
-                        calculation of Anisotropy
-                    """
+                    # calculation of Anisotropy
                     if "Anisotropy" in summary_statistic_method:
                         mean_anisotropy = anisotropy_calc(bacteria_in_this_micro_colony, max_distance_between_cells)
                         # store anisotropy
                         anisotropy_list.append(mean_anisotropy)
                         local_anisotropy_list.append(mean_anisotropy)
-                    """
-                        Finish
-                    """
 
-                        calculation of Density
-                    """
+                    # calculation of Density
                     if "Density" in summary_statistic_method:
-                        density = calc_density(bacteria_in_this_micro_colony_df, um_pixel_ratio)
+                        density = calc_density(bacteria_in_this_micro_colony, um_pixel_ratio)
                         # store density
                         density_list.append(density)
                         local_density_list.append(density)
-                    """
-                        Finish
-                    """
 
-                    """
-                        calculation of Correlate growth penalty based on location in microcolony
-                    """
+                    # calculation of Correlate growth penalty based on location in microcolony
                     if "dist_vs_growth_rate" in summary_statistic_method:
-                        dist_vs_growth_rate = calc_dist_vs_growth_rate(bacteria_in_this_micro_colony_df)
+                        dist_vs_growth_rate = calc_dist_vs_growth_rate(bacteria_in_this_micro_colony)
                         # store dist vs groeth rate
                         dist_vs_growth_rate_list.append(dist_vs_growth_rate)
                         local_dist_vs_growth_rate_list.append(dist_vs_growth_rate)
-                    """
-                        Finish
-                    """
-                    
-                    """
-                        calculation of fourier_descriptor in microcolony
-                    """
+
+                    # calculation of fourier_descriptor in microcolony
                     if "fourier_descriptor" in summary_statistic_method:
                         fourier_descriptor = calc_fourier_descriptor(bacteria_in_this_micro_colony, fig_path,
-                                                                     'micro_colony_img' + str(micro_colony_num+1) + '_fill')
+                                                                     'micro_colony_img' + str(micro_colony_num+1) +
+                                                                     '_fill')
                         # store fourier_descriptor
                         fourier_descriptor_list.append(fourier_descriptor)
                         local_fourier_descriptor_list.append(fourier_descriptor)
-                    """
-                        Finish
-                    """
 
     report_mean_summary_statistics = {}
     if "Aspect Ratio" in summary_statistic_method:
@@ -361,62 +338,37 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
         # if  number of bacteria < 2 : ellipse_params = `nan`
         ellipse_params = fit_ellipse(cs)
 
-        """
-           calculation of aspect ratio
-        """
+        # calculation of aspect ratio
         # if  number of bacteria < 2 : ellipse_params = `nan`
         # so: the aspect ratio can not be calculated
         if "Aspect Ratio" in summary_statistic_method and len(cs) > 1:
             aspect_ratio = aspect_ratio_calc(ellipse_params)
             # store aspect ratio
             aspect_ratio_list.append(aspect_ratio)
-        """
-           Finish
-        """
 
-        """
-           calculation of Anisotropy
-        """
+        # calculation of Anisotropy
         if "Anisotropy" in summary_statistic_method and len(cs) > 1:
             mean_anisotropy = anisotropy_calc(cs, max_distance_between_cells)
             # store anisotropy
             anisotropy_list.append(mean_anisotropy)
-        """
-           Finish
-        """
 
-        """
-           calculation of Density
-        """
+        # calculation of Density
         if "Density" in summary_statistic_method:
-            density = calc_density(df_current_time_step, um_pixel_ratio)
+            density = calc_density(cs, um_pixel_ratio)
             # store density
             density_list.append(density)
-        """
-           Finish
-        """
 
-        """
-           calculation of Correlate growth penalty based on location in microcolony
-        """
+        # calculation of Correlate growth penalty based on location in microcolony
         if "dist_vs_growth_rate" in summary_statistic_method:
-            dist_vs_growth_rate = calc_dist_vs_growth_rate(df_current_time_step)
+            dist_vs_growth_rate = calc_dist_vs_growth_rate(cs)
             # store dist vs growth rate
             dist_vs_growth_rate_list.append(dist_vs_growth_rate)
-        """
-           Finish
-        """
         
-        """
-           calculation of fourier_descriptor
-        """
+        # calculation of fourier_descriptor
         if "fourier_descriptor" in summary_statistic_method:
             fourier_descriptor = calc_fourier_descriptor(cs, fig_path, 'timestep_' + str(timestep+1) + '_fill')
             # store fourier descriptor
             fourier_descriptor_list.append(fourier_descriptor)
-        """
-           Finish
-        """
 
     report_mean_summary_statistics = {}
     if "Aspect Ratio" in summary_statistic_method:
@@ -450,6 +402,7 @@ def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='gl
     @param max_distance_between_cells float There is a maximum distance between bacteria that can be neighbours.
     @param um_pixel_ratio float  convert um to pixel (requires for calculation of density summary statistic)
     @param min_size_of_micro_colony int minimum size of micro colony (only for local mode)
+    @param fig_path str Directory of saved contours as images (optional)
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
