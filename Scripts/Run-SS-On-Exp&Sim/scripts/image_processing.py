@@ -77,14 +77,30 @@ def draw_gray_scale_img(img_dimensions, bacteria_center_x, bacteria_center_y, ba
 
 def save_fig(contours, fig_export_path, fig_name):
 
+    """
+    This function takes in a 2D NumPy array, saves it as an image file with .png format.
+
+    @param contours numpy representing the image to be saved.
+    @param fig_export_path string a string representing the file path where the saved image should be exported to.
+    @param fig_name  string  representing the name of the saved image.
+    """
+
     contours_from_array = Image.fromarray(contours)
     contours_from_array.save(fig_export_path + fig_name + ".png")
 
 
 def fill_contours(cs, img_dimension=None, um_pixel_ratio=0.144, margin=10):
     """
-    @param cs cellStates dict
-    @param margin int pixel
+    This function takes in a dictionary of cell states (cs),
+    and generates a 2D NumPy array representing the filled envelope of the micro-colony.
+    The envelope is filled using a morphological closing operation on a grayscale image generated from
+    the input cell state dictionary.
+
+    @param cs cellStates dict representing the cell states of a colony / micro-colony.
+    @param img_dimension: a tuple of integers representing the desired dimensions of the generated image.
+    If None, the image dimensions are determined based on the size of the micro-colony and a margin parameter.
+    @param um_pixel_ratio float representing the ratio of micrometers to pixels in the generated image.
+    @param margin int pixel representing the margin to add to the generated image.
     """
     # bacteria features
     bacteria_center_x, bacteria_center_y = BacteriaFeatures.find_bacteria_center_position(cs)
@@ -108,7 +124,6 @@ def fill_contours(cs, img_dimension=None, um_pixel_ratio=0.144, margin=10):
             bacteria_center_x += margin
             bacteria_center_y += margin
 
-
     bacteria_orientation = BacteriaFeatures.find_bacteria_orientation(cs)
     bacteria_major = BacteriaFeatures.convert_um_pixel(BacteriaFeatures.find_bacteria_major(cs))
     bacteria_minor = BacteriaFeatures.convert_um_pixel(BacteriaFeatures.find_bacteria_minor(cs))
@@ -124,21 +139,29 @@ def fill_contours(cs, img_dimension=None, um_pixel_ratio=0.144, margin=10):
     contours, hierarchy = cv2.findContours(np.copy(img_cloe), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # Fill contours so that the image is a filled envelope of the micro-colony
-    filled_img = cv2.drawContours(img_cloe, contours, -1, 255, cv2.FILLED)
+    filled_contours = cv2.drawContours(img_cloe, contours, -1, 255, cv2.FILLED)
 
-    return filled_img
+    return filled_contours
 
 
-def find_external_contours(img, fig_export_path, fig_name):
+def find_external_contours(filled_contours, fig_export_path, fig_name):
 
-    # Read in the image as grayscale
-    im = cv2.imread(img, 0)
+    """
+    This function takes in a 2D NumPy array representing the filled envelope of a colony / micro-colony,
+    and returns a 2D NumPy array representing the boundary of the colony / micro-colony.
+    The boundary is found by performing a contour finding operation on the input image.
+
+
+    @param filled_contours numpy representing the filled envelope of a micro-colony.
+    @param fig_export_path str representing the file path where the saved image should be exported to (optional)
+    @param fig_name str representing the name of the saved image.
+"""
 
     # we want to find the best contour possible with CHAIN_APPROX_NONE
-    contours, hierarchy = cv2.findContours(im.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv2.findContours(filled_contours.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
     # Create an output of all zeroes that has the same shape as the input
-    boundary = np.zeros_like(im)
+    boundary = np.zeros_like(filled_contours)
 
     cv2.drawContours(boundary, contours, -1, 255, 1)
 
@@ -149,6 +172,13 @@ def find_external_contours(img, fig_export_path, fig_name):
 
 
 def pixel_to_coordinate(contours):
+
+    """
+    This function takes in a list of 2D NumPy arrays representing contours,
+    and returns a tuple of two lists representing the x and y coordinates of the white pixels in the input contours.
+
+    @param contours numpy a list of 2D NumPy arrays representing contours.
+    """
 
     x_coordinates = []
     y_coordinates = []
@@ -162,6 +192,16 @@ def pixel_to_coordinate(contours):
 
 
 def coordinate_sampling(x_coordinates, y_coordinates, skip):
+
+    """
+    This function takes in two lists representing the x and y coordinates of pixels in an image,
+    and returns two downsampled lists of x and y coordinates, respectively.
+    The downsampling is performed by skipping a specified number of pixels between samples.
+
+    @param x_coordinates list  x coordinates of pixels in an image.
+    @param y_coordinates list y coordinates of pixels in an image.
+    @param skip int the number of pixels to skip between samples.
+    """
 
     x_coordinates = [x for i, x in enumerate(x_coordinates) if i % skip == 0]
     y_coordinates = [y for i, y in enumerate(y_coordinates) if i % skip == 0]
