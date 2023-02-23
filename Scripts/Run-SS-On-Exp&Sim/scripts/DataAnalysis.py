@@ -257,14 +257,14 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
 
                     # calculation of Density
                     if "Density" in summary_statistic_method:
-                        density = calc_density(bacteria_in_this_micro_colony, um_pixel_ratio)
+                        density = calc_density(bacteria_in_this_micro_colony)
                         # store density
                         density_list.append(density)
                         local_density_list.append(density)
 
                     # calculation of Correlate growth penalty based on location in microcolony
                     if "dist_vs_growth_rate" in summary_statistic_method:
-                        dist_vs_growth_rate = calc_dist_vs_growth_rate(bacteria_in_this_micro_colony)
+                        dist_vs_growth_rate = calc_dist_vs_growth_rate(bacteria_in_this_micro_colony, dt)
                         # store dist vs groeth rate
                         dist_vs_growth_rate_list.append(dist_vs_growth_rate)
                         local_dist_vs_growth_rate_list.append(dist_vs_growth_rate)
@@ -354,13 +354,13 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
 
         # calculation of Density
         if "Density" in summary_statistic_method:
-            density = calc_density(cs, um_pixel_ratio)
+            density = calc_density(cs)
             # store density
             density_list.append(density)
 
         # calculation of Correlate growth penalty based on location in microcolony
         if "dist_vs_growth_rate" in summary_statistic_method:
-            dist_vs_growth_rate = calc_dist_vs_growth_rate(cs)
+            dist_vs_growth_rate = calc_dist_vs_growth_rate(cs, dt)
             # store dist vs growth rate
             dist_vs_growth_rate_list.append(dist_vs_growth_rate)
         
