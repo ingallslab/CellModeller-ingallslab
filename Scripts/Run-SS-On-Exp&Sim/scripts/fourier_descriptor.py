@@ -4,7 +4,15 @@ import BacteriaFeatures
 import numpy as np
 
 
-def spatial_moment(x_coordinates, y_coordinates, p, q):
+def central_moment(x_coordinates, y_coordinates, p, q):
+    """
+    Calculates the central moment for given x and y coordinates.
+
+    @param x_coordinates list  x coordinates of image boundary
+    @param y_coordinates list  y coordinates of image boundary
+    @param p float order of x coordinate
+    @param q float order of y coordinate
+    """
 
     sum_y = 0
     m_pq = 0
@@ -19,10 +27,19 @@ def spatial_moment(x_coordinates, y_coordinates, p, q):
 
 
 def center_coordinate(x_coordinates, y_coordinates):
+    """
+    Calculates the centroid of given x and y coordinates.
 
-    m_00 = spatial_moment(x_coordinates, y_coordinates, p=0, q=0)
-    m_10 = spatial_moment(x_coordinates, y_coordinates, p=1, q=0)
-    m_01 = spatial_moment(x_coordinates, y_coordinates, p=0, q=1)
+    @param x_coordinates list x coordinates
+    @param y_coordinates list y coordinates
+
+    Returns:
+        tuple: the x and y coordinates of the centroid
+    """
+
+    m_00 = central_moment(x_coordinates, y_coordinates, p=0, q=0)
+    m_10 = central_moment(x_coordinates, y_coordinates, p=1, q=0)
+    m_01 = central_moment(x_coordinates, y_coordinates, p=0, q=1)
 
     x_center = m_10 / m_00
     y_center = m_01 / m_00
@@ -31,6 +48,17 @@ def center_coordinate(x_coordinates, y_coordinates):
 
 
 def calc_radial_distance(x_coordinates, y_coordinates, x_center, y_center):
+    """
+    Calculates the radial distance of each point from the centroid.
+
+    @param x_coordinates list x coordinates
+    @param y_coordinates list  y coordinates
+    @param x_center float x coordinate of the centroid
+    @param y_center float y coordinate of the centroid
+
+    Returns:
+        numpy array: array of radial distances
+    """
 
     dist = np.sqrt(np.power(x_coordinates - x_center, 2) + np.power(y_coordinates - y_center, 2))
 
@@ -40,7 +68,13 @@ def calc_radial_distance(x_coordinates, y_coordinates, x_center, y_center):
 def calc_normalized_radial_distance(dist):
 
     """
+    Calculates the normalized radial distance.
     equation: x / max
+
+    @param dist numpy array of radial distances
+
+    Returns:
+        numpy array: array of normalized radial distances
     """
 
     normalized_radial_distance = dist / np.max(dist)
@@ -49,6 +83,15 @@ def calc_normalized_radial_distance(dist):
 
 
 def discrete_fourier_transform(normalized_radial_distance):
+
+    """
+    Calculates the discrete Fourier transform of the normalized radial distances.
+
+    @param normalized_radial_distance numpy  array of normalized radial distances
+
+    Returns:
+        float: the standard deviation of the Fourier transform
+    """
 
     N = normalized_radial_distance.size
     output = []
@@ -65,6 +108,7 @@ def discrete_fourier_transform(normalized_radial_distance):
 def calc_fourier_descriptor(bacteria, fig_export_path, fig_name, img_dimension=[1200, 1200], skip=1):
     # https://en.wikipedia.org/wiki/Discrete_Fourier_transform
     """
+    Calculates the Fourier descriptor for a colony / micro-colony.
     @param  fig_export_path directory to export images
     @param fig_name image name
     @return fourier transform
@@ -72,22 +116,20 @@ def calc_fourier_descriptor(bacteria, fig_export_path, fig_name, img_dimension=[
 
     contours = image_processing.fill_contours(bacteria, img_dimension=None, um_pixel_ratio=0.144, margin=1)
     # save image
-    image_processing.save_fig(contours, fig_export_path, fig_name)
+    if fig_export_path:
+        image_processing.save_fig(contours, fig_export_path, fig_name)
     # external image
-    boundary = image_processing.find_external_contours(fig_export_path + fig_name + '.png', fig_export_path,
-                                                       fig_name + '_boundary')
+    boundary = image_processing.find_external_contours(contours, fig_export_path, fig_name + '_boundary')
     # convert pixel to coordinate
     x_coordinates, y_coordinates = image_processing.pixel_to_coordinate(boundary)
     x_coordinates, y_coordinates = image_processing.coordinate_sampling(x_coordinates, y_coordinates, skip=skip)
-    # normalization
-    # x_coordinates = BacteriaFeatures.min_max_normalization(x_coordinates)
-    # y_coordinates = BacteriaFeatures.min_max_normalization(y_coordinates)
     # center position
     x_center, y_center = center_coordinate(x_coordinates, y_coordinates)
-    fig, ax = plt.subplots()
-    plt.scatter(x_coordinates, y_coordinates)
-    plt.scatter(x_center, y_center)
-    plt.savefig(fig_export_path + fig_name + '_coordinates.png')
+    if fig_export_path:
+        fig, ax = plt.subplots()
+        plt.scatter(x_coordinates, y_coordinates)
+        plt.scatter(x_center, y_center)
+        plt.savefig(fig_export_path + fig_name + '_coordinates.png')
     radial_distance = calc_radial_distance(x_coordinates, y_coordinates, x_center, y_center)
     normalized_radial_distance = calc_normalized_radial_distance(radial_distance)
 
