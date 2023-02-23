@@ -10,9 +10,9 @@ if __name__ == '__main__':
     #  cellModeller output pickle files
     input_directory = '../input files/CellModeller_Sample'
 
-    summary_statistic_method_list = ["Aspect Ratio", "Anisotropy", "fractal dimension"]
+    summary_statistic_method_list = ["Aspect Ratio", "Anisotropy", "fourier_descriptor"]
     dt = 0.05  # interval time: 3 min
-    # useful for calculation of fractal dimension
+    # useful for calculation of fractal dimension (optional)
     fig_export_path = 'fig/sim/'
 
     # optional arguments
@@ -31,16 +31,14 @@ if __name__ == '__main__':
 
     # result: mean_summary_statistic_report = {summary statistic name: mean value, ....}
     # local summary statistics
-    '''
-    local_mean_summary_statistic_report = data_analysis(input_directory, summary_statistic_method_list, dt,
-                                                        mode, max_distance_between_cells, um_pixel_ratio,
-                                                        min_size_of_micro_colony, fig_export_path)
-    '''
+    # local_mean_summary_statistic_report = data_analysis(input_directory, summary_statistic_method_list, dt,
+    #                                                    mode, max_distance_between_cells, um_pixel_ratio,
+    #                                                    min_size_of_micro_colony, fig_path=fig_export_path)
     # global summary statistics
     global_mean_summary_statistic_report = data_analysis(input_directory, summary_statistic_method_list, dt, mode,
-                                                         max_distance_between_cells, um_pixel_ratio, fig_export_path)
+                                                         max_distance_between_cells, um_pixel_ratio, fig_path=fig_export_path)
     # mean value of each summary statistic
-    #print('local mode:')
-    #print(local_mean_summary_statistic_report)
+    # print('local mode:')
+    # print(local_mean_summary_statistic_report)
     print('global mode:')
     print(global_mean_summary_statistic_report)

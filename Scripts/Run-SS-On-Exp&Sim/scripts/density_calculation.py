@@ -218,7 +218,7 @@ def calculate_colony_density(img, fig_export_path=''):
     return density
 
 
-def main(cells, fig_export_path=''):
+def calc_density(cells, fig_export_path=''):
     """
     The main function for calculating colony density
 

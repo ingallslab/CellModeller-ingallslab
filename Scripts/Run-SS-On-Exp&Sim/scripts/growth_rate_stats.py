@@ -24,7 +24,7 @@ from scipy.optimize import fsolve
 from sklearn.linear_model import LinearRegression
 
 # Local/custom modules
-from Scripts.SummaryStatisticsOnExpAndSim.scripts.SummaryStatistics.repo.lownerJohnEllipseMaster.src.lownerJohnEllipse import plot_ellipse, welzl
+from lownerJohnEllipseMaster.src.lownerJohnEllipse import plot_ellipse, welzl
 
 
 def show_ellipse_plot(ellipse, centroids):
@@ -278,7 +278,7 @@ def plot_growth_vs_distance_to_colony_edge(growth_rates, dist, export_path):
     plt.savefig(export_path + "growth_vs_distance_to_colony_edge.png", bbox_inches='tight')
 
 
-def main(cells, dt, fig_export_path=''):
+def calc_dist_vs_growth_rate(cells, dt, fig_export_path=''):
     """
     The main function that will be used by pyabc
 
