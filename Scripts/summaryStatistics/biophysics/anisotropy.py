@@ -3,9 +3,10 @@ This script summarizes the total anisotropy in a list of cells
 using the orientational order parameter. 
 The script can be used for both local and global order parameters.
 Order parameter values for certain configurations:
-order_parameter \approx 0 if all cells are randomly oriented
+order_parameter is 1/sqrt(N) if all cells are randomly oriented
 order_parameter = 1 if all cells are oriented the same way
-Order parameter formula from liquid crystal theory: https://arxiv.org/pdf/1409.3542.pdf
+Order parameter formula from liquid crystal theory applied to the xy plane.
+See refs https://www.nature.com/articles/s41467-018-06370-3 and https://arxiv.org/pdf/2003.10509.pdf
 """
 
 import pickle
@@ -47,8 +48,8 @@ def get_order_parameter(cell_angles):
     for angle in cell_angles:
         cell_vector = np.array([np.cos(angle), np.sin(angle)])
         theta = np.arccos(np.dot(director_vector, cell_vector)) #no need to divide by mags of each vector since they are unit vectors
-        sum_count += (3*np.cos(theta)**2 - 1)/2
-    order_parameter = sum_count/len(cell_angles)
+        sum_count += np.cos(2*theta)
+    order_parameter = np.sqrt(sum_count)/len(cell_angles)
     
     return order_parameter
     
