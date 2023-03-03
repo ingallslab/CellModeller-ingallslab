@@ -48,8 +48,8 @@ def get_order_parameter(cell_angles):
     for angle in cell_angles:
         cell_vector = np.array([np.cos(angle), np.sin(angle)])
         theta = np.arccos(np.dot(director_vector, cell_vector)) #no need to divide by mags of each vector since they are unit vectors
-        sum_count += np.cos(2*theta)
-    order_parameter = np.sqrt(sum_count)/len(cell_angles)
+        sum_count += np.absolute(np.cos(2*theta))
+    order_parameter = np.sqrt(sum_count/len(cell_angles))
     
     return order_parameter
     
