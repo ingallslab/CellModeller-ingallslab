@@ -142,7 +142,7 @@ def func_current_bacteria_info(cs, dt):
 
 
 def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, min_size_of_micro_colony,
-                          max_distance_between_cells, um_pixel_ratio, fig_path):
+                          max_distance_between_cells, um_pixel_ratio, fig_path, only_last_time_step):
     """
     Goal: this is the main function; the function calls other function that are described above and
     calculates summary statistics for each micro colony in each time-step and store the outputs in a dictionary.
@@ -168,6 +168,8 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
     # read pickle files
     path = pickle_files_directory + "/*.pickle"
     filename_list = [filename for filename in sorted(glob.glob(path))]
+    if only_last_time_step:
+        filename_list = [filename_list[-1]]
 
     # In order to identify merged micro colonies, micro colony labels are stored.
     micro_colonies = []
@@ -300,7 +302,7 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
 
 
 def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_distance_between_cells, um_pixel_ratio,
-                    fig_path):
+                    fig_path, only_last_time_step):
     """
     Goal: this is the main function; the function calls other functions described above and
     calculates summary statistics for each time-step and store the outputs in a dictionary.
@@ -324,6 +326,9 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
     # read pickle files
     path = pickle_files_directory + "/*.pickle"
     filename_list = [filename for filename in sorted(glob.glob(path))]
+
+    if only_last_time_step:
+        filename_list = [filename_list[-1]]
 
     for cnt, filename in enumerate(filename_list):
 
@@ -392,7 +397,7 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
 
 
 def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='global', max_distance_between_cells=3.4,
-                  um_pixel_ratio=0.144, min_size_of_micro_colony=2, fig_path=None):
+                  um_pixel_ratio=0.144, min_size_of_micro_colony=2, fig_path=None, only_last_time_step=False):
     """
     goal: calculation of summary statistics in global or local mode
     @param pickle_files_directory str directory of simulation / experimental pickle files
@@ -403,6 +408,7 @@ def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='gl
     @param um_pixel_ratio float  convert um to pixel (requires for calculation of density summary statistic)
     @param min_size_of_micro_colony int minimum size of micro colony (only for local mode)
     @param fig_path str Directory of saved contours as images (optional)
+    @param only_last_time_step boolean Calculation of summary stats on only the last time step
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
@@ -411,7 +417,7 @@ def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='gl
 
     if mode == 'local':
         return micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, min_size_of_micro_colony,
-                                     max_distance_between_cells, um_pixel_ratio, fig_path)
+                                     max_distance_between_cells, um_pixel_ratio, fig_path, only_last_time_step)
     elif mode == 'global':
         return global_analysis(pickle_files_directory, summary_statistic_method, dt, max_distance_between_cells,
-                               um_pixel_ratio, fig_path)
+                               um_pixel_ratio, fig_path, only_last_time_step)

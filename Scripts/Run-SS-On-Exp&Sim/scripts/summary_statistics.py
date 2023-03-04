@@ -85,26 +85,10 @@ def fit_ellipse(cs):
             b are the major and minor radii, and t is the rotation angle.
 
     """
-    # fit ellipse to micro colony
-    # endpoints
-    vertex1_x = [cs[it].ends[0][0] for it in cs]
-    vertex1_y = [cs[it].ends[0][1] for it in cs]
-    vertex2_x = [cs[it].ends[1][0] for it in cs]
-    vertex2_y = [cs[it].ends[1][1] for it in cs]
-
     bacteria_center_x = [cs[it].pos[0] for it in cs]
     bacteria_center_y = [cs[it].pos[1] for it in cs]
-    bacteria_minor = [cs[it].radius for it in cs]
-    # direction vector: [x, y] --> orientation: arctan (y / x)
-    bacteria_orientation = [np.arctan2(cs[it].dir[1], cs[it].dir[0]) for it in cs if cs]
 
-    # now I calculate co-vertexes of bacteria ellipse
-    co_vertex_x, co_vertex_y = find_co_vertex(bacteria_center_x, bacteria_center_y, bacteria_minor,
-                                              bacteria_orientation)
-
-    endpoints_x = vertex1_x + vertex2_x + co_vertex_x
-    endpoints_y = vertex1_y + vertex2_y + co_vertex_y
-    endpoints = pd.DataFrame(zip(endpoints_x, endpoints_y))
+    endpoints = pd.DataFrame(zip(bacteria_center_x, bacteria_center_y))
 
     # fit ellipse
     ellipse_params = fit_enclosing_ellipse(endpoints)
