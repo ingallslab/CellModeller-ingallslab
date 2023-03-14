@@ -4,6 +4,7 @@ sys.path.append(os.path.join(os.path.expanduser('~'), 'CellModeller-ingallslab/S
 import numpy as np
 import CellModeller
 from scipy.optimize import curve_fit
+from sklearn.linear_model import LinearRegression
 from countPopulations import count_cell_types
 from helperFunctions import create_pickle_list, read_time_step, load_cellStates, get_max_cell_type
 import matplotlib.pyplot as plt
@@ -17,12 +18,15 @@ def get_exp_deviation(file_dir_path, dt):
     Larger standard deviations indicate deviation from exponential growth.
     @param  file_dir_path   string containing path to directory containing .pickle files
     @param  dt              time step
-    @return std_residuals   standard deviation of residuals of exponential fit
+    @return r_squared       correlation coefficient (R**2 value) of regression to ln(population_curve) vs. time
     """
     time_list, population_list = get_population_curve(file_dir_path, dt)
-    std_residuals = exp_error_std(time_list, population_list)
     
-    return std_residuals
+    x = np.array(time_list)
+    y = np.log(np.array(population_list))
+    slope, intercept, r_squared = perform_linear_regression(x, y)
+    
+    return r_squared
 
 def get_population_curve(file_dir_path, dt):
     """
@@ -50,26 +54,29 @@ def get_population_curve(file_dir_path, dt):
         population_list.append(total_population)
         
     return time_list, population_list  
+        
+def perform_linear_regression(x, y):
+    """
+    Fit a line to [x, y] data. Get regression coefficients and R**2.
     
-def exp_error_std(xdata, ydata):
+    @param  x           (1D nparray) X data
+    @param  y           (1D nparray) Y data
+    @return slope       Slope of linear fit
+    @return intercept   Intercept of linear fit
+    @return r_squared   R**2 of linear fit
     """
-    Calculate standard deviation of sum of squared residuals of an exponential fit.
-    @param  xdata           list of data for x-axis
-    @param  ydata           list of data for y-axis
-    @return std_residual    standard deviation of residuals
-    """
-    opt_parms, parm_cov = curve_fit(exp_func, xdata, ydata, maxfev=10000)
-    f = 1*np.exp(opt_parms[0]*np.array(xdata)) #exponential growth equation
-    residuals = np.array(ydata) - f
-    std_residuals = np.std(residuals)
+    # Necessary to reshape data for LinearRegression model
+    x_reshape = x.reshape((-1,1))
     
-    return std_residuals
+    # Linear regression
+    model = LinearRegression().fit(x_reshape, y)
+    r_squared = model.score(x_reshape, y)
+    model_prediction = model.predict(x_reshape)
+    slope = model.coef_[0] # slope
+    intercept = model.intercept_ # intercept
+    r_squared = model.score(x_reshape, y)
     
-def exp_func(t, K):
-    """
-    Standard exponential function
-    """
-    return np.exp(K * t)
+    return slope, intercept, r_squared
     
 """
 For plotting purposes only
