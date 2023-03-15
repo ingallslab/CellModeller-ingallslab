@@ -105,30 +105,32 @@ def discrete_fourier_transform(normalized_radial_distance):
     return np.std(output)
 
 
-def calc_fourier_descriptor(bacteria, fig_export_path, fig_name, img_dimension=[1200, 1200], skip=1):
+def calc_fourier_descriptor(bacteria, fig_export_path, fig_name, shape, margin):
     # https://en.wikipedia.org/wiki/Discrete_Fourier_transform
     """
     Calculates the Fourier descriptor for a colony / micro-colony.
     @param  fig_export_path directory to export images
     @param fig_name image name
+    @param shape float shape parameter
+    @param margin int pixel representing the margin to add to the generated image.
     @return fourier transform
     """
 
-    contours = image_processing.fill_contours(bacteria, img_dimension=None, um_pixel_ratio=0.144, margin=1)
+    filled_contours = image_processing.fill_contours(bacteria, um_pixel_ratio=0.144, shape=shape, margin=margin)
     # save image
     if fig_export_path:
-        image_processing.save_fig(contours, fig_export_path, fig_name)
+        image_processing.save_fig(filled_contours, fig_export_path, fig_name)
     # external image
-    boundary = image_processing.find_external_contours(contours, fig_export_path, fig_name + '_boundary')
+    boundary = image_processing.find_external_contours(filled_contours, fig_export_path, fig_name + '_boundary')
     # convert pixel to coordinate
     x_coordinates, y_coordinates = image_processing.pixel_to_coordinate(boundary)
-    x_coordinates, y_coordinates = image_processing.coordinate_sampling(x_coordinates, y_coordinates, skip=skip)
     # center position
     x_center, y_center = center_coordinate(x_coordinates, y_coordinates)
     if fig_export_path:
         fig, ax = plt.subplots()
         plt.scatter(x_coordinates, y_coordinates)
         plt.scatter(x_center, y_center)
+        plt.gca().invert_yaxis()
         plt.savefig(fig_export_path + fig_name + '_coordinates.png')
     radial_distance = calc_radial_distance(x_coordinates, y_coordinates, x_center, y_center)
     normalized_radial_distance = calc_normalized_radial_distance(radial_distance)
