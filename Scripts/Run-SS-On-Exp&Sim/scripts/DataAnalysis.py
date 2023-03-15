@@ -142,7 +142,7 @@ def func_current_bacteria_info(cs, dt):
 
 
 def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, min_size_of_micro_colony,
-                          max_distance_between_cells, um_pixel_ratio, fig_path, only_last_time_step):
+                          max_distance_between_cells, um_pixel_ratio, fig_path, only_last_time_step, shape, margin):
     """
     Goal: this is the main function; the function calls other function that are described above and
     calculates summary statistics for each micro colony in each time-step and store the outputs in a dictionary.
@@ -152,6 +152,8 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
     @param min_size_of_micro_colony int minimum size of micro colony
     @param max_distance_between_cells float There is a maximum distance between bacteria that can be neighbours.
     @param um_pixel_ratio float  convert um to pixel (requires for calculation of density summary statistic)
+    @param shape float shape parameter
+    @param margin int pixel representing the margin to add to the generated image.
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
@@ -275,7 +277,7 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
                     if "fourier_descriptor" in summary_statistic_method:
                         fourier_descriptor = calc_fourier_descriptor(bacteria_in_this_micro_colony, fig_path,
                                                                      'micro_colony_img' + str(micro_colony_num+1) +
-                                                                     '_fill')
+                                                                     '_fill', shape, margin)
                         # store fourier_descriptor
                         fourier_descriptor_list.append(fourier_descriptor)
                         local_fourier_descriptor_list.append(fourier_descriptor)
@@ -302,7 +304,7 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
 
 
 def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_distance_between_cells, um_pixel_ratio,
-                    fig_path, only_last_time_step):
+                    fig_path, only_last_time_step, shape, margin):
     """
     Goal: this is the main function; the function calls other functions described above and
     calculates summary statistics for each time-step and store the outputs in a dictionary.
@@ -311,6 +313,8 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
     @param dt float interval time
     @param max_distance_between_cells float There is a maximum distance between bacteria that can be neighbours.
     @param um_pixel_ratio float  convert um to pixel (requires for calculation of density summary statistic)
+    @param shape float shape parameter
+    @param margin int pixel representing the margin to add to the generated image.
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
@@ -371,7 +375,8 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
         
         # calculation of fourier_descriptor
         if "fourier_descriptor" in summary_statistic_method:
-            fourier_descriptor = calc_fourier_descriptor(cs, fig_path, 'timestep_' + str(timestep+1) + '_fill')
+            fourier_descriptor = calc_fourier_descriptor(cs, fig_path, 'timestep_' + str(timestep+1) + '_fill', shape,
+                                                         margin)
             # store fourier descriptor
             fourier_descriptor_list.append(fourier_descriptor)
 
@@ -397,7 +402,8 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
 
 
 def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='global', max_distance_between_cells=3.4,
-                  um_pixel_ratio=0.144, min_size_of_micro_colony=2, fig_path=None, only_last_time_step=False):
+                  um_pixel_ratio=0.144, min_size_of_micro_colony=2, fig_path=None, only_last_time_step=False,
+                  shape=0.048, margin=10):
     """
     goal: calculation of summary statistics in global or local mode
     @param pickle_files_directory str directory of simulation / experimental pickle files
@@ -409,6 +415,8 @@ def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='gl
     @param min_size_of_micro_colony int minimum size of micro colony (only for local mode)
     @param fig_path str Directory of saved contours as images (optional)
     @param only_last_time_step boolean Calculation of summary stats on only the last time step
+    @param shape float shape parameter
+    @param margin int pixel representing the margin to add to the generated image.
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
@@ -417,7 +425,8 @@ def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='gl
 
     if mode == 'local':
         return micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, min_size_of_micro_colony,
-                                     max_distance_between_cells, um_pixel_ratio, fig_path, only_last_time_step)
+                                     max_distance_between_cells, um_pixel_ratio, fig_path, only_last_time_step, shape,
+                                     margin)
     elif mode == 'global':
         return global_analysis(pickle_files_directory, summary_statistic_method, dt, max_distance_between_cells,
-                               um_pixel_ratio, fig_path, only_last_time_step)
+                               um_pixel_ratio, fig_path, only_last_time_step, shape, margin)
