@@ -12,7 +12,6 @@ def save_fig(contours, fig_export_path, fig_name):
 
     """
     This function takes in a 2D NumPy array, saves it as an image file with .png format.
-
     @param contours numpy representing the image to be saved.
     @param fig_export_path string a string representing the file path where the saved image should be exported to.
     @param fig_name  string  representing the name of the saved image.
@@ -28,19 +27,22 @@ def fill_contours(cs, um_pixel_ratio=0.144, margin=10, shape=0.048):
     and generates a 2D NumPy array representing the filled envelope of the micro-colony.
     The envelope is filled using a morphological closing operation on a grayscale image generated from
     the input cell state dictionary.
-
     @param cs cellStates dict representing the cell states of a colony / micro-colony.
     @param um_pixel_ratio float representing the ratio of micrometers to pixels in the generated image.
     @param margin int pixel representing the margin to add to the generated image.
     @param shape float shape parameter
     """
-    # bacteria features
-    bacteria_center_x, bacteria_center_y = BacteriaFeatures.find_bacteria_center_position(cs)
-    # convert to pixel
-    bacteria_center_x = BacteriaFeatures.convert_um_pixel(bacteria_center_x, um_pixel_ratio)
-    bacteria_center_y = BacteriaFeatures.convert_um_pixel(bacteria_center_y, um_pixel_ratio)
+    # bacteria endpoints
+    bacteria_end_point1_x, bacteria_end_point1_y, bacteria_end_point2_x, bacteria_end_point2_y = \
+        BacteriaFeatures.find_bacteria_endpoints(cs)
 
-    points = [(x, y) for x, y in zip(bacteria_center_x, bacteria_center_y)]
+    bacteria_endpoint_x = bacteria_end_point1_x + bacteria_end_point2_x
+    bacteria_endpoint_y = bacteria_end_point1_y + bacteria_end_point2_y
+    # convert to pixel
+    bacteria_endpoint_x = BacteriaFeatures.convert_um_pixel(bacteria_endpoint_x, um_pixel_ratio)
+    bacteria_endpoint_y = BacteriaFeatures.convert_um_pixel(bacteria_endpoint_y, um_pixel_ratio)
+
+    points = [(x, y) for x, y in zip(bacteria_endpoint_x, bacteria_endpoint_y)]
 
     fig, ax = plt.subplots()
 
@@ -92,8 +94,6 @@ def find_external_contours(gray, fig_export_path, fig_name):
     This function takes in a 2D NumPy array representing the filled envelope of a colony / micro-colony,
     and returns a 2D NumPy array representing the boundary of the colony / micro-colony.
     The boundary is found by performing a contour finding operation on the input image.
-
-
     @param filled_contours numpy representing the filled envelope of a micro-colony.
     @param fig_export_path str representing the file path where the saved image should be exported to (optional)
     @param fig_name str representing the name of the saved image.
@@ -120,7 +120,6 @@ def pixel_to_coordinate(contours):
     """
     This function takes in a list of 2D NumPy arrays representing contours,
     and returns a tuple of two lists representing the x and y coordinates of the white pixels in the input contours.
-
     @param contours numpy a list of 2D NumPy arrays representing contours.
     """
 
@@ -133,3 +132,4 @@ def pixel_to_coordinate(contours):
             y_coordinates.extend(list(white_pixel[0]))
 
     return x_coordinates, y_coordinates
+    
