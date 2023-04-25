@@ -66,7 +66,7 @@ if __name__ == '__main__':
     
     ### Plots ###
     exact = {"gamma": 10, "reg_param": 0.1}
-    limits = {"gamma": [0, 100], "reg_param": [0, 1]}
+    limits = {"gamma": [10, 1000], "reg_param": [1/1000, 1/10]}
     for key in exact.keys():
         plot_1d(history, limits, exact, key)
     
