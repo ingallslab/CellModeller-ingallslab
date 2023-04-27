@@ -81,19 +81,40 @@ def get_boundary(cs, um_pixel_ratio=0.144, shape=0.048):
 
     coords = alpha_shape.boundary.coords.xy
     vert = [(x, y) for x, y in zip(coords[0], coords[1])]
-    
-    """try:
-        coords = alpha_shape.boundary.coords.xy
-        vert = [(x, y) for x, y in zip(coords[0], coords[1])]
-    except:
-        vert = []
-        print(type(alpha_shape.boundary))
-        for polygon in alpha_shape.geoms:
-            coords = polygon.boundary.coords.xy
-            vert = vert + [(x, y) for x, y in zip(coords[0], coords[1])]
-            #print(vert)"""
 
     return vert
+
+def optimal_alpha(cs, um_pixel_ratio, display):
+    min_area = -1
+    best_shape = -1
+    best_boundary = 0
+    alpha_list = []
+    area_list = []
+    for shape_i in range(1, 100, 1 ):
+        shape_i = shape_i/1000
+        #print(shape_i)
+        alpha_list.append(shape_i)
+        try:
+            boundary = np.array(get_boundary(cs, um_pixel_ratio=um_pixel_ratio, shape=shape_i))
+            area = polygon_area(boundary)
+            area_list.append(area)
+            if min_area < 0 or area < min_area:
+                min_area = area
+                best_shape = shape_i
+                best_boundary = boundary
+        except Exception as e:
+            area_list.append(-1)
+            print("An error occurred at " + str(shape_i) + " :", e)
+    #print(best_shape, " ", area)
+
+    # plot area respect to alpha value 
+    plt.plot(alpha_list, area_list)
+    if display:
+        plt.show()
+    plt.close()
+
+    return(best_boundary, best_shape)
+
 
 def polygon_area(coords):
     """
@@ -108,14 +129,14 @@ def polygon_area(coords):
     area = abs(area) / 2.0
     return area
 
-def cal_convexity(cs, fig_export_path, fig_name, um_pixel_ratio=0.144, shape = 0.048, display = False, smart = True):
+def cal_convexity(cs, fig_export_path='', fig_name='fig', um_pixel_ratio=0.144, shape = 0.048, display = False, smart = True):
     """
     Calculates the ratio of the convex hull perimeter and perimeter of the fitted colony boundary
     @param cs: dictionary, cell status
     @param fig_export_path: string, 
-    @param fig_name: string,
-    @param um_pixel_ratio: float
-    @param shape: float
+    @param fig_name: string, the name of the scene
+    @param um_pixel_ratio: float, um to pixel convertion constant
+    @param shape: float, alpha shape value
     @param display: bool, determine whether to display figure
     @param smart: bool, determine whether to automatically choose shape value or use the given
     """
@@ -141,31 +162,12 @@ def cal_convexity(cs, fig_export_path, fig_name, um_pixel_ratio=0.144, shape = 0
 
     ################### contour #####################
     # find the best alphashape value
-    min_area = -1
-    best_shape = -1
-    best_boundary = 0
-    alpha_list = []
-    area_list = []
     if smart:
-        for shape_i in range(1, 100, 1 ):
-            shape_i = shape_i/1000
-            #print(shape_i)
-            alpha_list.append(shape_i)
-            try:
-                boundary = np.array(get_boundary(cs, um_pixel_ratio=um_pixel_ratio, shape=shape_i))
-                area = polygon_area(boundary)
-                area_list.append(area)
-                if min_area < 0 or area < min_area:
-                    min_area = area
-                    best_shape = shape_i
-                    best_boundary = boundary
-            except Exception as e:
-                area_list.append(-1)
-                print("An error occurred at " + str(shape_i) + " :", e)
-        #print(best_shape, " ", area)
-        contour_perimeter = cal_perimeter(best_boundary)
+        boundary, best_shape = optimal_alpha(cs, um_pixel_ratio, display)
+        contour_perimeter = cal_perimeter(boundary)
     else:
         boundary = np.array(get_boundary(cs, um_pixel_ratio=um_pixel_ratio, shape=shape))
+        best_shape = shape
         contour_perimeter = cal_perimeter(boundary)
 
 
@@ -193,18 +195,11 @@ def cal_convexity(cs, fig_export_path, fig_name, um_pixel_ratio=0.144, shape = 0
     plt.savefig(fig_export_path + fig_name + "_" + "hull_n_boundary.png")
     plt.close()
 
-    # plot area respect to alpha value 
-    plt.plot(alpha_list, area_list)
-    if display:
-        plt.show()
-    plt.close()
-
-    
 
     return convex_hull_perimeter / contour_perimeter, best_shape
 
 
 if __name__ == '__main__':
-    picklefile = "sep8_step-000089.pickle"  # "sep7_step-000097" "step-00200.pickle" #"circle_step-01000.pickle" 'jan3_step-000097.pickle' "sep8_step-000089.pickle"
+    picklefile = "../../unit test/sep8_step-000089.pickle"  # "sep7_step-000097" "step-00200.pickle" #"circle_step-01000.pickle" 'jan3_step-000097.pickle' "sep8_step-000089.pickle"
     cs = load_cellStates("", picklefile)
-    print(cal_convexity(cs, "", "fig_name", um_pixel_ratio=0.144, display = True))
+    print(cal_convexity(cs, "", "fig_name", um_pixel_ratio=0.144, display = True, smart= True))

@@ -1,9 +1,5 @@
-#import sys
-#sys.path.append('../../../')
 import os
 import pandas as pd
-from os import listdir
-from os.path import isfile, join
 import glob
 
 from Scripts.run_ss_on_exp_sim.scripts.helper_functions.helperFunctions import load_cellStates
@@ -95,7 +91,7 @@ if __name__ == '__main__':
 
     # pickle directories path
     dirpath = "../unit test"  #input("input experimental data directory: ")
-    onlydirs = [f for f in listdir(dirpath) if not isfile(join(dirpath, f))]
+    onlydirs = [f for f in os.listdir(dirpath) if not os.path.isfile(os.path.join(dirpath, f))]
     
     # recursively extract  pickles from each directory            
     print('start running experimental data')

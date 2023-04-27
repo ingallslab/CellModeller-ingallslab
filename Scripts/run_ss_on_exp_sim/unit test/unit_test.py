@@ -18,7 +18,7 @@ from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.convexity_smart import
 new unit test using unittest module, with the pass condition that it doesn't crash
 """
 
-picklefile = "sep8_step-000089.pickle"  # "sep7_step-000097" "step-00200.pickle" #"circle_step-01000.pickle" 'jan3_step-000097.pickle' "sep8_step-000089.pickle"
+picklefile = "sep8_step-000089.pickle"  
 cs_last = load_cellStates("", picklefile)
 dyad_picklefile = 'sep7_step-000020.pickle'
 cs_dyad = load_cellStates("", dyad_picklefile)
@@ -29,8 +29,8 @@ dt = 0.05  # 3 min, 0.05=3/60
 shape = 0.048
 margin=10
 fig_path = ""
-pickle_files_directory = 'sep_scene8'
-scene = 'scene8'
+pickle_files_directory = '../input files/CellProfiler_Sample'
+scene = 'CellProfiler_Sample'
 
 class Test_sum_stats(unittest.TestCase):
 

@@ -26,21 +26,16 @@ import uuid
 from CellModeller.Simulator import Simulator
 import pyabc
 
-# Local/custom modules
-sys.path.append(os.path.join(os.path.expanduser('~'), 'CellModeller-ingallslab/Scripts/summaryStatistics/biophysics/'))
-sys.path.append(os.path.join(os.path.expanduser('~'), 'CellModeller-ingallslab/Scripts/RunSS_henry/scripts/SummaryStatistic'))
-
 from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.AspectRatio import calc_aspect_ratio
 from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.Anisotropy import get_global_order_parameter
 from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.density_calculation import get_density_parameter
 from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.growth_rate_exp_deviation import get_exp_deviation
-#from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.CellOrientationOnBoundary import calc_cell_orientation_on_boundary
-#from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.AgeDistanceDistribution import calcAgeDistanceDistribution
-#from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.dyadStructure import calcDyadStructure
-#from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.fourier_descriptor import calc_fourier_descriptor
-#from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.convexity_smart import cal_convexity
+from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.CellOrientationOnBoundary import calc_cell_orientation_on_boundary
+from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.AgeDistanceDistribution import calcAgeDistanceDistribution
+from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.dyadStructure import calcDyadStructure
+from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.fourier_descriptor import calc_fourier_descriptor
+from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.convexity_smart import cal_convexity
 
-sys.path.append(os.path.join(os.path.expanduser('~'), 'CellModeller-ingallslab/Scripts/summaryStatistics/'))
 from Scripts.run_ss_on_exp_sim.scripts.helper_functions import helperFunctions 
 
 cellmodeller_module = "simulation_module.py"  
@@ -78,12 +73,12 @@ def model(parameters):
     
     # Calculate summary statistics
     summary_stats = {}
-    #summary_stats['Aspect Ratio'] = calc_aspect_ratio(cells)
+    summary_stats["Aspect Ratio"] = calc_aspect_ratio(cells)
     summary_stats["Anisotropy"] = get_global_order_parameter(cells)
     summary_stats["Density"] = get_density_parameter(cells)
-    summary_stats['growth_rate_exp_deviation'] = get_exp_deviation(export_path, dt)
+    summary_stats["growth_rate_exp_deviation"] = get_exp_deviation(export_path, dt)
     #summary_stats['convexity'] = calc_aspect_ratio(cs)
-    #summary_stats["fourier_descriptor"] = calc_fourier_descriptor(cells)
+    summary_stats["fourier_descriptor"] = calc_fourier_descriptor(cells)
     #summary_stats['cell_orientaion_on_boundary'] = calc_cell_orientation_on_boundary(cells)
     #summary_stats['AgeDistanceDistribution'] = calcAgeDistanceDistribution(cells)
     #summary_stats['dyadStructure'] = calcDyadStructure(cs)
@@ -168,17 +163,17 @@ if __name__ == '__main__':
 
     # Define ABC-SMC settings
     n_cores = 8
-    population_size = 40 # Number of simulations we need to accept to complete one calibration round
+    population_size = 10 #40 # Number of simulations we need to accept to complete one calibration round
     min_epsilon = 0.05  # Stop if epsilon becomes smaller than this  
-    max_populations = 5 #  Number of calibration rounds
+    max_populations = 1 #5 #  Number of calibration rounds(stages)
 
     # Define experimental data
     exp_summary_stats = {}
-    #exp_summary_stats["Aspect Ratio"] = 0.706879319359634
+    exp_summary_stats["Aspect Ratio"] = 0.706879319359634
     exp_summary_stats["Anisotropy"] = 0.75535426433106
     exp_summary_stats["Density"] = 0.953001564059211
     exp_summary_stats["growth_rate_exp_deviation"] = 0.985259710208264
-    #exp_summary_stats["fourier_descriptor"] = 0.0206358837797498
+    exp_summary_stats["fourier_descriptor"] = 0.0206358837797498
 
     # Define prior distribution for each parameter [lb, ub]
     param_config = {'gamma': [10, 1000], 'reg_param': [1/1000, 1/10]}
@@ -201,13 +196,13 @@ if __name__ == '__main__':
                        prior, 
                        distance_function=distance_calculation, 
                        population_size=population_size, 
-                       sampler=pyabc.sampler.MulticoreEvalParallelSampler(n_cores)
+                       #sampler=pyabc.sampler.MulticoreEvalParallelSampler(n_cores)
                        )
     
     # Create database                   
     db_path = "results.db"
-    #abc.new("sqlite:///" + db_path, exp_summary_stats)
-    abc.load("sqlite:///" + db_path, 1)
+    abc.new("sqlite:///" + db_path, exp_summary_stats)
+    #abc.load("sqlite:///" + db_path, 1)
     
     # Run
     history = abc.run(minimum_epsilon=min_epsilon, 

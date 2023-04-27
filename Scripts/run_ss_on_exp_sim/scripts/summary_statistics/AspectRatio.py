@@ -1,4 +1,3 @@
-#from Scripts.RunSS_henry.scripts.process.BacteriaFeatures import fit_ellipse
 import numpy as np
 import pandas as pd
 
