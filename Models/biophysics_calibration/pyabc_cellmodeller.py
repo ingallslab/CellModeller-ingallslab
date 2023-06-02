@@ -40,6 +40,7 @@ from Scripts.run_ss_on_exp_sim.scripts.helper_functions import helperFunctions
 
 cellmodeller_module = "simulation_module.py"  
 
+
 def model(parameters):
     """
     The "model" run by pyabc. Every time a simulation is run, the following occurs:
@@ -77,11 +78,11 @@ def model(parameters):
     summary_stats["Anisotropy"] = get_global_order_parameter(cells)
     summary_stats["Density"] = get_density_parameter(cells)
     summary_stats["growth_rate_exp_deviation"] = get_exp_deviation(export_path, dt)
-    #summary_stats['convexity'] = calc_aspect_ratio(cs)
+    summary_stats['convexity'] = cal_convexity(cells)
     summary_stats["fourier_descriptor"] = calc_fourier_descriptor(cells)
-    #summary_stats['cell_orientaion_on_boundary'] = calc_cell_orientation_on_boundary(cells)
-    #summary_stats['AgeDistanceDistribution'] = calcAgeDistanceDistribution(cells)
-    #summary_stats['dyadStructure'] = calcDyadStructure(cs)
+    summary_stats['cell_orientaion_on_boundary'] = calc_cell_orientation_on_boundary(cells)
+    summary_stats['AgeDistanceDistribution'] = calcAgeDistanceDistribution(cells)
+    summary_stats['dyadStructure'] = calcDyadStructure(cells)
 
 
     # Write summary stats to file for convenience (optional) 
