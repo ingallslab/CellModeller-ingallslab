@@ -129,7 +129,7 @@ def polygon_area(coords):
     area = abs(area) / 2.0
     return area
 
-def cal_convexity(cs, fig_export_path='', fig_name='fig', um_pixel_ratio=0.144, shape = 0.048, display = False, smart = True):
+def cal_convexity(cs, fig_export_path=None, fig_name='fig', um_pixel_ratio=0.144, shape = 0.048, display = False, smart = True):
     """
     Calculates the ratio of the convex hull perimeter and perimeter of the fitted colony boundary
     @param cs: dictionary, cell status
@@ -172,34 +172,36 @@ def cal_convexity(cs, fig_export_path='', fig_name='fig', um_pixel_ratio=0.144, 
 
 
 ######################### plot ###########################
-    # plot all endpoints of the colony
-    plt.plot(coordinates[:,0], coordinates[:,1], 'o')
+    if fig_export_path:
+        # plot all endpoints of the colony
+        plt.plot(coordinates[:,0], coordinates[:,1], 'o')
 
-    #Plot convex hull:
-    """for simplex in hull.simplices:
-        plt.plot(coordinates[simplex, 0], coordinates[simplex, 1], 'k-')"""
-    # We could also have directly used the vertices of the hull, which for 2-D are guaranteed to be in counterclockwise order:
-    plt.plot(coordinates[hull.vertices,0], coordinates[hull.vertices,1], 'r--', lw=2)
-    plt.plot(coordinates[hull.vertices[0],0], coordinates[hull.vertices[0],1], 'ro')
-    #plt.title("convex_hull.png")
-    #if display:
-        #plt.show()
-    #plt.close()
+        #Plot convex hull:
+        """for simplex in hull.simplices:
+            plt.plot(coordinates[simplex, 0], coordinates[simplex, 1], 'k-')"""
+        # We could also have directly used the vertices of the hull, which for 2-D are guaranteed to be in counterclockwise order:
+        plt.plot(coordinates[hull.vertices,0], coordinates[hull.vertices,1], 'r--', lw=2)
+        plt.plot(coordinates[hull.vertices[0],0], coordinates[hull.vertices[0],1], 'ro')
+        #plt.title("convex_hull.png")
+        #if display:
+            #plt.show()
+        #plt.close()
 
-    # plot countour
-    plt.plot(boundary[:,0], boundary[:,1], 'o')
-    plt.plot(boundary[:,0], boundary[:,1], 'b--', lw=2)
-    plt.title("convex_hull+boundary.png")
-    if display:
-        plt.show()
-    plt.savefig(fig_export_path + fig_name + "_" + "hull_n_boundary.png")
-    plt.close()
-
-
-    return convex_hull_perimeter / contour_perimeter, best_shape
+        # plot countour
+        plt.plot(boundary[:,0], boundary[:,1], 'o')
+        plt.plot(boundary[:,0], boundary[:,1], 'b--', lw=2)
+        plt.title("convex_hull+boundary.png")
+        if display:
+            plt.show()
+        plt.savefig(fig_export_path + fig_name + "_" + "hull_n_boundary.png")
+        plt.close()
 
 
+    return convex_hull_perimeter / contour_perimeter
+
+"""
 if __name__ == '__main__':
     picklefile = "../../unit test/sep8_step-000089.pickle"  # "sep7_step-000097" "step-00200.pickle" #"circle_step-01000.pickle" 'jan3_step-000097.pickle' "sep8_step-000089.pickle"
     cs = load_cellStates("", picklefile)
     print(cal_convexity(cs, "", "fig_name", um_pixel_ratio=0.144, display = True, smart= True))
+"""
