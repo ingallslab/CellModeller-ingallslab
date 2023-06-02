@@ -54,7 +54,7 @@ def find_bacteria_center(cs):
     return bacteria_center_x, bacteria_center_y
 
 
-def calc_cell_orientation_on_boundary(cs, fig_path, scene_name, display = False):
+def calc_cell_orientation_on_boundary(cs, fig_path=None, scene_name=None, display = False):
     '''
     Function that calculates an alphashape around one cell colony to
     obtain a set of cells (points) that defines the boundary and fits a cubic
@@ -154,32 +154,35 @@ def calc_cell_orientation_on_boundary(cs, fig_path, scene_name, display = False)
         if angles[cnt] > 90:
             angles[cnt] = abs(angles[cnt]-180) 
 
-    # get distribution of angles with binsize = 360 (360 refers to angle in radian?)
-    #print("angles: ", angles)
-    y, x = np.histogram(angles, bins=180) 
+    if fig_path:
+        # get distribution of angles with binsize = 360 (360 refers to angle in radian?)
+        #print("angles: ", angles)
+        y, x = np.histogram(angles, bins=180)
 
-    # plot the distribution
-    plt.hist(angles, bins=180)
-    # Add labels and title
-    plt.xlabel('angles')
-    plt.ylabel('Frequency')
-    plt.title('distribution of angles of cells on boundary')
-    # save the plot
-    plt.savefig(fig_path+scene_name+'_cell_orientation.png')
-    if display:
-        # Show the plot
-        plt.show()
-    plt.close()
+        # plot the distribution
+        plt.hist(angles, bins=180)
+        # Add labels and title
+        plt.xlabel('angles')
+        plt.ylabel('Frequency')
+        plt.title('distribution of angles of cells on boundary')
+        # save the plot
+        plt.savefig(fig_path+scene_name+'_cell_orientation.png')
+        if display:
+            # Show the plot
+            plt.show()
+        plt.close()
 
     # omit final bin edge in x because np.histogram returns N+1 edges
     # and N frequencies
-    #return [y, x[:-1]]
+    # return [y, x[:-1]]
     return sum(angles) / len(angles)
 
 
+"""
 if __name__ == '__main__':
     picklefile = 'step-00800.pickle'
     cs = load_cellStates("", picklefile)
     # print(vars(cs[31]))
     # print(cs)
     print(calc_cell_orientation_on_boundary(cs, True))
+"""
