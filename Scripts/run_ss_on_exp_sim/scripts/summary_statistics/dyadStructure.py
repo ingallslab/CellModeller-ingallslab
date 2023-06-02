@@ -39,7 +39,7 @@ def calcDyadStructure(cs):
     return d2
 
 
-
+"""
 if __name__ == '__main__':
     picklefile = 'step-000011.pickle'
     cs = load_cellStates("", picklefile)
@@ -47,3 +47,4 @@ if __name__ == '__main__':
     #print(cs)
     if len(cs) == 2:
         print(calcDyadStructure(cs))
+"""
