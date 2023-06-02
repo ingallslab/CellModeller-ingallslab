@@ -42,7 +42,7 @@ def calc_distances_from_centroid(cs):
     return distances_from_centroid
 
 
-def calcAgeDistanceDistribution(cs, fig_path, dir, display = False):
+def calcAgeDistanceDistribution(cs, fig_path=None, dir=None, display=False):
     '''
     Function that groups cells into their respective age group and calculates
     the distance of each cell in an age group to the cell colony's centroid.
@@ -66,34 +66,35 @@ def calcAgeDistanceDistribution(cs, fig_path, dir, display = False):
     cell_ages = [cs[it].cellAge for it in cs]
     cell_ages = np.array(cell_ages)
 
-
-    # plot the plot  
-    plt.scatter(cell_ages, distances_from_centroid)
     # fit a linear regression line
     model = LinearRegression().fit(cell_ages.reshape(-1, 1), distances_from_centroid)
     slope = model.coef_[0]
     intercept = model.intercept_
 
-    # plot the regression line
-    plt.plot(cell_ages, slope*cell_ages + intercept, color='red')
+    if fig_path:
+        # plot the plot
+        plt.scatter(cell_ages, distances_from_centroid)
+        # plot the regression line
+        plt.plot(cell_ages, slope*cell_ages + intercept, color='red')
 
-    plt.xlabel('cell ages')
-    plt.ylabel('distance to centroid')
-    plt.title('mean distance to centroid of each cell age groups in '+ dir)
-    # save plot
-    #print('save')
-    plt.savefig(fig_path+dir+'_age_distance.png')
-    if display:
-        plt.show()
-    plt.close()
+        plt.xlabel('cell ages')
+        plt.ylabel('distance to centroid')
+        plt.title('mean distance to centroid of each cell age groups in '+ dir)
+        # save plot
+        #print('save')
+        plt.savefig(fig_path+dir+'_age_distance.png')
+        if display:
+            plt.show()
+        plt.close()
 
     return slope
 
 
-
+"""
 if __name__ == '__main__':
     picklefile = 'jan3_step-000097.pickle'
     cs = load_cellStates("", picklefile)
     #print(vars(cs[23]))
     #print(len(cs))
     print(calcAgeDistanceDistribution(cs, "hi" ,True))
+"""
