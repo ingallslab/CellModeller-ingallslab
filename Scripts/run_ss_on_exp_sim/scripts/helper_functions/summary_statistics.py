@@ -1,4 +1,4 @@
-from lownerJohnEllipseMaster.src.lownerJohnEllipse import welzl
+from Scripts.run_ss_on_exp_sim.scripts.lownerJohnEllipseMaster.src.lownerJohnEllipse import welzl
 import numpy as np
 import pandas as pd
 import scipy.linalg as la

@@ -5,6 +5,9 @@ import os
 from setuptools import setup
 import subprocess
 
+"""
+23.04.20 add alphashape
+"""
 
 # Fetch version from git tags, and write to version.py.
 # Also, when git is not available (PyPi package), use stored version.py.
@@ -27,12 +30,14 @@ setup(name='CellModeller',
                       'vtk',
                       'pyabc',
                       'opencv-python',
-                      'scikit-image'],
+                      'scikit-image',
+                      'alphashape'],
     setup_requires=['numpy', 'scipy', 'pyopengl', 'mako', 'pyqt5', 'pyopencl', 'reportlab', 'matplotlib',
                     'vtk',
                     'pyabc',
                     'opencv-python',
-                    'scikit-image'],
+                    'scikit-image',
+                    'alphashape'],
     packages=['CellModeller',
                 'CellModeller.Biophysics',
                 'CellModeller.Biophysics.BacterialModels',

@@ -2,11 +2,17 @@ import random
 from CellModeller.Regulation.ModuleRegulator import ModuleRegulator
 from CellModeller.Biophysics.BacterialModels.CLBacterium_reg_param import CLBacterium_reg_param
 from CellModeller.GUI import Renderers
-import numpy
-import math
+import numpy as np
 
-gamma = 10
-reg_param = 0.1 
+# Calibration parameters
+gamma = 100
+reg_param = 0.01 
+
+# Physiological parameters
+growth_mu = 1.397
+growth_sigma = 0.426
+division_mu = 5.785
+division_sigma = 2.526
 
 def setup(sim):
     # Set biophysics module
@@ -30,9 +36,10 @@ def setup(sim):
 
 def init(cell):
     # Specify mean and distribution of initial cell size
-    cell.targetVol = 3.5 + random.uniform(0.0,0.5)
+    cell.targetVol = np.random.normal(division_mu, division_sigma)
     # Specify growth rate of cells
-    cell.growthRate = 1.0
+    
+    cell.growthRate = np.random.normal(growth_mu, growth_sigma)
     cell.color = (0.0,1.0,0.0)
 
 def update(cells):
@@ -48,11 +55,14 @@ def update(cells):
 
 def divide(parent, d1, d2):
     # Specify target cell size that triggers cell division
-    d1.targetVol = 3.5 + random.uniform(0.0,0.5)
-    d2.targetVol = 3.5 + random.uniform(0.0,0.5)
+    d1.targetVol = np.random.normal(division_mu, division_sigma)
+    d2.targetVol = np.random.normal(division_mu, division_sigma)
+    d1.growthRate = np.random.normal(growth_mu, growth_sigma)
+    d2.growthRate = np.random.normal(growth_mu, growth_sigma)
     
 def setparams(param_dict):
-    global gamma, reg_param
+    global gamma, reg_param, adhesion
     gamma = param_dict['gamma']
     reg_param = param_dict['reg_param']
+    #adhesion = param_dict['adhesion']
 
