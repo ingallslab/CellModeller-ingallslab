@@ -33,6 +33,7 @@ def create_pickle_list_full_path(directory):
     @return pickle_list list of .pickle files
     """
     pickle_list = [pickle_file for pickle_file in glob.glob(directory + "/*.pickle")]
+    pickle_list.sort()
     return pickle_list
 
 # 4.20 make the script to close the file after reading it
