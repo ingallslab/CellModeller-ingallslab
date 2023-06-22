@@ -61,7 +61,10 @@ def count_cell_types(cells, max_cell_type=max_cell_type_default):
 
     # Iterate through cellStates DataFrame and add to the populations array based on cellType
     for id, cell in cells.items():
-        cell_type = cell.cellType
+        try:
+            cell_type = cell.cellType
+        except: 
+            cell_type = 0 # In case experimental data doesn't have cellType attribute
         for cell_type_idx in range(0, max_cell_type + 1):
             if cell_type_idx == cell_type:
                 populations[cell_type] += 1

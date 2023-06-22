@@ -92,7 +92,10 @@ def get_max_cell_type(cellStates):
     """
     max_cell_type = 0
     for cell in cellStates:
-        read_type = cellStates[cell].cellType
+        try:
+            read_type = cellStates[cell].cellType
+        except:
+            continue # In case experimental data does not have cellType
         if read_type > max_cell_type:
             max_cell_type = read_type
 
