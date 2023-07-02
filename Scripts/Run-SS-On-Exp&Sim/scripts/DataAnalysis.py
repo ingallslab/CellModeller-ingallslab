@@ -10,7 +10,7 @@ import CellProfilerAnalysis
 from summary_statistics import fit_ellipse, aspect_ratio_calc, anisotropy_calc
 from density_calculation import calc_density
 from growth_rate_stats import calc_dist_vs_growth_rate
-from fourier_descriptor import calc_fourier_descriptor
+from convexity import cal_convexity
 
 # set number of recursion
 sys.setrecursionlimit(10000)
@@ -142,7 +142,7 @@ def func_current_bacteria_info(cs, dt):
 
 
 def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, min_size_of_micro_colony,
-                          max_distance_between_cells, um_pixel_ratio, fig_path, only_last_time_step, shape, margin):
+                          max_distance_between_cells, um_pixel_ratio, fig_path, only_last_time_step):
     """
     Goal: this is the main function; the function calls other function that are described above and
     calculates summary statistics for each micro colony in each time-step and store the outputs in a dictionary.
@@ -151,9 +151,7 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
     @param dt float interval time
     @param min_size_of_micro_colony int minimum size of micro colony
     @param max_distance_between_cells float There is a maximum distance between bacteria that can be neighbours.
-    @param um_pixel_ratio float  convert um to pixel (requires for calculation of density summary statistic)
-    @param shape float shape parameter
-    @param margin int pixel representing the margin to add to the generated image.
+    @param um_pixel_ratio float  convert um to pixel (requires for calculation of density & convexity summary statistic)
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
@@ -165,7 +163,7 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
     anisotropy_list = []
     density_list = []
     dist_vs_growth_rate_list = []
-    fourier_descriptor_list = []
+    convexity_list = []
 
     # read pickle files
     path = pickle_files_directory + "/*.pickle"
@@ -190,7 +188,7 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
         # store Correlate growth penalty based on location in micro colony of this time step
         local_dist_vs_growth_rate_list = []
         # store fourier descriptor of micro colonies of this time step
-        local_fourier_descriptor_list = []
+        local_convexity_list = []
         micro_colonies_in_current_time_step = []
 
         timestep = cnt + 1
@@ -273,38 +271,43 @@ def micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, 
                         dist_vs_growth_rate_list.append(dist_vs_growth_rate)
                         local_dist_vs_growth_rate_list.append(dist_vs_growth_rate)
 
-                    # calculation of fourier_descriptor in microcolony
-                    if "fourier_descriptor" in summary_statistic_method:
-                        fourier_descriptor = calc_fourier_descriptor(bacteria_in_this_micro_colony, fig_path,
-                                                                     'micro_colony_img' + str(micro_colony_num+1) +
-                                                                     '_fill', shape, margin)
-                        # store fourier_descriptor
-                        fourier_descriptor_list.append(fourier_descriptor)
-                        local_fourier_descriptor_list.append(fourier_descriptor)
+                    # calculation of convexity in microcolony
+                    if "convexity" in summary_statistic_method:
+                        convexity = cal_convexity(cs=bacteria_in_this_micro_colony, um_pixel_ratio=um_pixel_ratio,
+                                                  fig_export_path=fig_path,
+                                                  fig_name='micro_colony_img' + str(micro_colony_num+1))
+                        # store convexity
+                        convexity_list.append(convexity)
+                        local_convexity_list.append(convexity)
 
     report_mean_summary_statistics = {}
     if "Aspect Ratio" in summary_statistic_method:
-        report_mean_summary_statistics["Aspect Ratio"] = np.mean(aspect_ratio_list)
+        # report_mean_summary_statistics["Aspect Ratio"] = np.mean(aspect_ratio_list)
+        report_mean_summary_statistics["Aspect Ratio"] = aspect_ratio_list
     if "Anisotropy" in summary_statistic_method:
         # remove nan values
         anisotropy_list = [x for x in anisotropy_list if str(x) != 'nan']
-        report_mean_summary_statistics["Anisotropy"] = np.mean(anisotropy_list)
+        # report_mean_summary_statistics["Anisotropy"] = np.mean(anisotropy_list)
+        report_mean_summary_statistics["Anisotropy"] = anisotropy_list
     if "Density" in summary_statistic_method:
-        report_mean_summary_statistics["Density"] = np.mean(density_list)
+        # report_mean_summary_statistics["Density"] = np.mean(density_list)
+        report_mean_summary_statistics["Density"] = density_list
     if "dist_vs_growth_rate" in summary_statistic_method:
         # remove nan values
         dist_vs_growth_rate_list = [x for x in dist_vs_growth_rate_list if str(x) != 'nan']
-        report_mean_summary_statistics["dist_vs_growth_rate"] = np.mean(dist_vs_growth_rate_list)
-    if "fourier_descriptor" in summary_statistic_method:
+        # report_mean_summary_statistics["dist_vs_growth_rate"] = np.mean(dist_vs_growth_rate_list)
+        report_mean_summary_statistics["dist_vs_growth_rate"] = dist_vs_growth_rate_list
+    if "convexity" in summary_statistic_method:
         # remove nan values
-        fourier_descriptor_list = [x for x in fourier_descriptor_list if str(x) != 'nan']
-        report_mean_summary_statistics["fourier_descriptor"] = np.mean(fourier_descriptor_list)
+        convexity_list = [x for x in convexity_list if str(x) != 'nan']
+        # report_mean_summary_statistics["convexity"] = np.mean(convexity_list)
+        report_mean_summary_statistics["convexity"] = convexity_list
 
     return report_mean_summary_statistics
 
 
 def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_distance_between_cells, um_pixel_ratio,
-                    fig_path, only_last_time_step, shape, margin):
+                    fig_path, only_last_time_step):
     """
     Goal: this is the main function; the function calls other functions described above and
     calculates summary statistics for each time-step and store the outputs in a dictionary.
@@ -312,9 +315,7 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
     @param summary_statistic_method   str     the method that we apply over time-lapse
     @param dt float interval time
     @param max_distance_between_cells float There is a maximum distance between bacteria that can be neighbours.
-    @param um_pixel_ratio float  convert um to pixel (requires for calculation of density summary statistic)
-    @param shape float shape parameter
-    @param margin int pixel representing the margin to add to the generated image.
+    @param um_pixel_ratio float  convert um to pixel (requires for calculation of density & convexity summary statistic)
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
@@ -325,7 +326,7 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
     anisotropy_list = []
     density_list = []
     dist_vs_growth_rate_list = []
-    fourier_descriptor_list = []
+    convexity_list = []
 
     # read pickle files
     path = pickle_files_directory + "/*.pickle"
@@ -373,37 +374,41 @@ def global_analysis(pickle_files_directory, summary_statistic_method, dt, max_di
             # store dist vs growth rate
             dist_vs_growth_rate_list.append(dist_vs_growth_rate)
         
-        # calculation of fourier_descriptor
-        if "fourier_descriptor" in summary_statistic_method:
-            fourier_descriptor = calc_fourier_descriptor(cs, fig_path, 'timestep_' + str(timestep+1) + '_fill', shape,
-                                                         margin)
+        # calculation of convexity
+        if "convexity" in summary_statistic_method and len(cs) > 7:
+            convexity = cal_convexity(cs=cs, um_pixel_ratio=um_pixel_ratio, fig_export_path=fig_path,
+                                      fig_name='timestep_' + str(timestep+1))
             # store fourier descriptor
-            fourier_descriptor_list.append(fourier_descriptor)
+            convexity_list.append(convexity)
 
     report_mean_summary_statistics = {}
     if "Aspect Ratio" in summary_statistic_method:
-        report_mean_summary_statistics["Aspect Ratio"] = np.mean(aspect_ratio_list)
+        # report_mean_summary_statistics["Aspect Ratio"] = np.mean(aspect_ratio_list)
+        report_mean_summary_statistics["Aspect Ratio"] = aspect_ratio_list
     if "Anisotropy" in summary_statistic_method:
         # remove nan values
         anisotropy_list = [x for x in anisotropy_list if str(x) != 'nan']
-        report_mean_summary_statistics["Anisotropy"] = np.mean(anisotropy_list)
+        # report_mean_summary_statistics["Anisotropy"] = np.mean(anisotropy_list)
+        report_mean_summary_statistics["Anisotropy"] = anisotropy_list
     if "Density" in summary_statistic_method:
-        report_mean_summary_statistics["Density"] = np.mean(density_list)
+        # report_mean_summary_statistics["Density"] = np.mean(density_list)
+        report_mean_summary_statistics["Density"] = density_list
     if "dist_vs_growth_rate" in summary_statistic_method:
         # remove nan values
         dist_vs_growth_rate_list = [x for x in dist_vs_growth_rate_list if str(x) != 'nan']
-        report_mean_summary_statistics["dist_vs_growth_rate"] = np.mean(dist_vs_growth_rate_list)
-    if "fourier_descriptor" in summary_statistic_method:
+        # report_mean_summary_statistics["dist_vs_growth_rate"] = np.mean(dist_vs_growth_rate_list)
+        report_mean_summary_statistics["dist_vs_growth_rate"] = dist_vs_growth_rate_list
+    if "convexity" in summary_statistic_method:
         # remove nan values
-        fourier_descriptor_list = [x for x in fourier_descriptor_list if str(x) != 'nan']
-        report_mean_summary_statistics["fourier_descriptor"] = np.mean(fourier_descriptor_list)
+        convexity_list = [x for x in convexity_list if str(x) != 'nan']
+        # report_mean_summary_statistics["convexity"] = np.mean(convexity_list)
+        report_mean_summary_statistics["convexity"] = convexity_list
 
     return report_mean_summary_statistics
 
 
 def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='global', max_distance_between_cells=3.4,
-                  um_pixel_ratio=0.144, min_size_of_micro_colony=2, fig_path=None, only_last_time_step=False,
-                  shape=0.048, margin=10):
+                  um_pixel_ratio=0.144, min_size_of_micro_colony=2, fig_path=None, only_last_time_step=False):
     """
     goal: calculation of summary statistics in global or local mode
     @param pickle_files_directory str directory of simulation / experimental pickle files
@@ -415,8 +420,6 @@ def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='gl
     @param min_size_of_micro_colony int minimum size of micro colony (only for local mode)
     @param fig_path str Directory of saved contours as images (optional)
     @param only_last_time_step boolean Calculation of summary stats on only the last time step
-    @param shape float shape parameter
-    @param margin int pixel representing the margin to add to the generated image.
     Return report_mean_summary_statistics dictionary  According to the summary statics calculated for micro colonies,
     the average value of each summary statistic is reported as follows:
     Summary statistic name: average value of summary statistic
@@ -425,8 +428,7 @@ def data_analysis(pickle_files_directory, summary_statistic_method, dt, mode='gl
 
     if mode == 'local':
         return micro_colony_analysis(pickle_files_directory, summary_statistic_method, dt, min_size_of_micro_colony,
-                                     max_distance_between_cells, um_pixel_ratio, fig_path, only_last_time_step, shape,
-                                     margin)
+                                     max_distance_between_cells, um_pixel_ratio, fig_path, only_last_time_step)
     elif mode == 'global':
         return global_analysis(pickle_files_directory, summary_statistic_method, dt, max_distance_between_cells,
-                               um_pixel_ratio, fig_path, only_last_time_step, shape, margin)
+                               um_pixel_ratio, fig_path, only_last_time_step)
