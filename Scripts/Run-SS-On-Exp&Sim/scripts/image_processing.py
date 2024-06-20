@@ -5,7 +5,7 @@ import BacteriaFeatures
 from matplotlib import pyplot as plt
 import alphashape
 from shapely.geometry import Polygon, MultiPolygon
-from matplotlib.patches import Polygon
+from matplotlib.patches import Polygon as plg
 
 
 def save_fig(contours, fig_export_path, fig_name):
@@ -21,7 +21,13 @@ def save_fig(contours, fig_export_path, fig_name):
     contours_from_array.save(fig_export_path + fig_name + ".png")
 
 
-def fill_contours(cs, um_pixel_ratio=0.144, margin=10, shape=0.048):
+def interpolate_points(start, end, num_points=100):
+    x_values = np.linspace(start[0], end[0], num_points)
+    y_values = np.linspace(start[1], end[1], num_points)
+    return list(zip(x_values, y_values))
+
+
+def fill_contours(cs, um_pixel_ratio=0.144, margin=10, shape=0.048, fig_export_path=None, fig_name=None):
     """
     This function takes in a dictionary of cell states (cs),
     and generates a 2D NumPy array representing the filled envelope of the micro-colony.
@@ -32,6 +38,7 @@ def fill_contours(cs, um_pixel_ratio=0.144, margin=10, shape=0.048):
     @param margin int pixel representing the margin to add to the generated image.
     @param shape float shape parameter
     """
+
     # bacteria endpoints
     bacteria_end_point1_x, bacteria_end_point1_y, bacteria_end_point2_x, bacteria_end_point2_y = \
         BacteriaFeatures.find_bacteria_endpoints(cs)
@@ -56,12 +63,29 @@ def fill_contours(cs, um_pixel_ratio=0.144, margin=10, shape=0.048):
     vert = [(x, y) for x, y in zip(coords[0], coords[1])]
 
     # Create a Polygon object
-    polygon = Polygon(vert, facecolor='white')
-    ax.add_patch(polygon)
+    # print(points)
+    for point in points:
+        plt.scatter(point[0], point[1])
+    polygon_plt = plg(vert, facecolor='none', edgecolor='red')
+    ax.add_patch(polygon_plt)
 
     # Set the limits of the axis
     ax.set_xlim([min(coords[0]) - margin, max(coords[0]) + margin])
     ax.set_ylim([min(coords[1]) - margin, max(coords[1]) + margin])
+
+    polygon_shapely = Polygon(vert)
+    exterior_coords = polygon_shapely.exterior.coords
+
+    # Generate all boundary points
+    boundary_points = []
+    for i in range(len(exterior_coords) - 1):
+        start = exterior_coords[i]
+        end = exterior_coords[i + 1]
+        points = interpolate_points(start, end, num_points=100)
+        boundary_points.extend(points)
+
+    x, y = zip(*boundary_points)
+    plt.scatter(x, y, color='blue', s=2, alpha=0.5)
 
     plt.gca().invert_yaxis()
     # Remove the x-axis and y-axis
@@ -72,20 +96,10 @@ def fill_contours(cs, um_pixel_ratio=0.144, margin=10, shape=0.048):
     ax.get_xaxis().set_ticks([])
     ax.get_yaxis().set_ticks([])
 
-    # Set the background color to black
-    fig.set_facecolor('black')
-    ax.set_facecolor('black')
+    if fig_export_path is not None:
+        plt.savefig(fig_export_path + fig_name + ".png")
 
-    # Draw the plot onto a numpy array
-    fig.canvas.draw()
-
-    # Extract the numpy array from the figure
-    arr = np.array(fig.canvas.renderer.buffer_rgba())
-
-    # Convert the numpy array to grayscale
-    gray = cv2.cvtColor(arr, cv2.COLOR_RGBA2GRAY)
-
-    return gray
+    return boundary_points
 
 
 def find_external_contours(gray, fig_export_path, fig_name):
