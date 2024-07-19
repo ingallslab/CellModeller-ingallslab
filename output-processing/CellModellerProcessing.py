@@ -263,6 +263,14 @@ def starting_process(input_directory, cell_types, output_directory):
         df_neighbors = pd.DataFrame(rows_neighbors, columns=['Image Number', 'First Object id',
                                                              'Second Object id'])
 
+    # Convert 'Image Number' and 'First Object id' columns to string in both dataframes
+    df_neighbors['Image Number'] = df_neighbors['Image Number'].astype(str)
+    df_neighbors['First Object id'] = df_neighbors['First Object id'].astype(str)
+    df_neighbors['Second Object id'] = df_neighbors['Second Object id'].astype(str)
+
+    df['ImageNumber'] = df['ImageNumber'].astype(str)
+    df['Id'] = df['Id'].astype(str)
+
     df_merge = df_neighbors.merge(df, left_on=['Image Number', 'First Object id'],
                                   right_on=['ImageNumber', 'Id'], how='inner', suffixes=('_node', '_info'))
 
