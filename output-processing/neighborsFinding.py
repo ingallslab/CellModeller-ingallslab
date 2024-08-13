@@ -1,129 +1,234 @@
-import sys
-import os
-import math
 import numpy as np
-import pickle
-import CellModeller
-import subprocess
-import string
-import shutil
-from CellModeller.Simulator import Simulator
-import networkx
-from reportlab.pdfgen.canvas import Canvas
-from reportlab.lib import units
-from reportlab.lib.colors import Color
-from reportlab.graphics.shapes import Circle
-import pandas as pd
+import cv2
 import glob
-import os
+import pickle
+from skimage.measure import label, regionprops
+from scipy.ndimage import binary_dilation, distance_transform_edt
+import matplotlib.pyplot as plt
+from skimage.transform import resize
+import pandas as pd
 
 
-def generate_network(G, num_cells, ct_tos, n_cts, pos, celldata, cell_ids):
-    for i in range(0, num_cells):  # make all nodes
-        G.add_node(i, pos=pos[i], type=celldata[i], label=cell_ids[i],
-                   color=(1, 0, 0) if celldata[i] == 0 else (0, 1, 0))
-    for i in range(0, num_cells):  # make all edges (when all nodes are present)
-        for j in range(0, n_cts[i]):  # make all edges from contact_tos
-            G.add_edge(i, ct_tos[i, j], width=8, color='black')
+def generate_new_color(existing_colors, seed=None):
+    """
+    Generate a new random color that is not in the existing_colors array.
+    """
+    np.random.seed(seed)
+    while True:
+        # Generate a random color (R, G, B)
+        new_color = np.random.randint(0, 256, size=3)
+        # Ensure the color is not black and not already in existing_colors
+        if not np.any(np.all(existing_colors == new_color, axis=1)) and not np.all(new_color == [0, 0, 0]):
+            return new_color
 
 
-def get_current_contacts(G, data):
-    cs = data['cellStates']
-    it = iter(cs)
-    n = len(cs)
-    cell_type = {}
-    pos_dict = {}
-    cell_ids = {}
-    for it in cs:
-        cell_ids[cs[it].idx] = cs[it].id
-        cell_type[cs[it].idx] = cs[it].cellType
-        pos_dict[cs[it].idx] = cs[it].pos[0:2]
+def draw_bacteria_on_array(bacteria, colors, array, x_min_val, y_min_val, min_length=1, min_width=1, margin=50):
+    """
+    Draw the bacteria on a numpy array (image) using given colors.
+    """
+    for idx, bacterium in enumerate(bacteria):
+        center, direction, length, width, endpoint1, endpoint2 = (
+            bacterium['center'], bacterium['direction'], bacterium['length'], bacterium['width'],
+            bacterium['endpoint1'], bacterium['endpoint2'])
 
-    # print(cell_ids)
-    modname = data['moduleName']
-    moduleStr = data['moduleStr']
-    sim = Simulator(modname, 0.0, moduleStr=moduleStr, saveOutput=False)
-    sim.loadFromPickle(data)
-    sim.phys.update_grid()  # we assume local cell_centers is current
-    sim.phys.bin_cells()
-    sim.phys.cell_sqs = sim.phys.cell_sqs_dev.get()  # get updated cell sqs
-    sim.phys.sort_cells()
-    sim.phys.sorted_ids_dev.set(sim.phys.sorted_ids)  # push changes to the device
-    sim.phys.sq_inds_dev.set(sim.phys.sq_inds)
-    sim.phys.find_contacts(predict=False)
-    sim.phys.get_cts()
-    ct_pts = sim.phys.ct_pts  # these are the points on the cell surface - they can be transformed into the global
-    # coordinate system
-    ct_tos = sim.phys.ct_tos  # this is the list of *some* contacts from each cell (only for lower cell_ids)
-    ct_dists = sim.phys.ct_dists
-    cell_cts = sim.phys.cell_n_cts  # not really all the contacts of the cell, because the tos are only defined
-    # between a cell and ones with lower ids
-    generate_network(G, n, ct_tos, cell_cts, pos_dict, cell_type, cell_ids)
+        # Ensure minimum values for length and width
+        length = max(length, min_length)
+        width = max(width, min_width)
+
+        # Adjust the endpoints based on minimum x and y values and a margin
+        endpoint1[0] = endpoint1[0] - x_min_val + margin
+        endpoint2[0] = endpoint2[0] - x_min_val + margin
+        endpoint1[1] = endpoint1[1] - y_min_val + margin
+        endpoint2[1] = endpoint2[1] - y_min_val + margin
+
+        # Calculate the perpendicular direction for the width of the bacterium
+        perpendicular = np.array([-direction[1], direction[0]])
+
+        # Ensure the endpoints are within image bounds
+        endpoint1 = np.maximum(endpoint1, 0).astype(int)
+        endpoint2 = np.maximum(endpoint2, 0).astype(int)
+
+        # Define the points that form the shape of the bacterium
+        points = np.array([
+            endpoint1 - width / 2 * perpendicular,
+            endpoint1 + width / 2 * perpendicular,
+            endpoint2 + width / 2 * perpendicular,
+            endpoint2 - width / 2 * perpendicular
+        ], dtype=np.int32)
+
+        # Draw the bacterium polygon on the array using the corresponding color
+        color = tuple(int(c) for c in colors[idx])  # Ensure color is a tuple of integers
+        cv2.fillPoly(array, [points], color=color)
+
+        # Draw semi-circles at the endpoints to complete the bacterium shape
+        if width > 0:
+            cv2.ellipse(array, tuple(endpoint1), (int(width / 2), int(width / 2)), 0, 0, 360, color, -1)
+            cv2.ellipse(array, tuple(endpoint2), (int(width / 2), int(width / 2)), 0, 0, 360, color, -1)
 
 
-def find_neighbors(G, time, rows):
+def downscale_image(image_array, scale_factor):
+    """
+    Downscale the image by a factor to reduce its size for faster processing.
+    """
+    return resize(image_array,
+                  (image_array.shape[0] // scale_factor, image_array.shape[1] // scale_factor),
+                  order=0, anti_aliasing=False, preserve_range=True).astype(np.uint8)
+
+
+def upscale_labels(labeled_array, original_shape, scale_factor):
+    """
+    Upscale the labeled array back to the original image shape after processing.
+    """
+    return resize(labeled_array,
+                  original_shape,
+                  order=0, anti_aliasing=False, preserve_range=True).astype(np.int32)
+
+
+def fast_color_to_label(image_array, colors, scale_factor=10):
+    """
+    Convert the image array's colors to unique labels using downscaling for faster processing.
+    Each unique color is mapped to a unique label.
+    """
+    # Downscale the image to reduce processing time
+    downscaled_image = downscale_image(image_array, scale_factor)
+
+    # Initialize the labeled array for the downscaled image
+    downscaled_labeled_array = np.zeros(downscaled_image.shape[:2], dtype=np.int32)
+
+    # Label each color in the downscaled image
+    for label_id, color in enumerate(colors, start=1):
+        # Create a mask where the color matches
+        mask = np.all(downscaled_image == color, axis=-1)
+        # Apply the label to the masked regions
+        downscaled_labeled_array[mask] = label_id
+
+    # Upscale the labeled array back to the original image size
+    labeled_array = upscale_labels(downscaled_labeled_array, image_array.shape[:2], scale_factor)
+
+    return labeled_array
+
+
+def fast_expand_labels(labeled_array):
+    """
+    Expand labels until they touch each other using the distance transform.
+    """
+    # Compute the distance transform and nearest label indices
+    distances, nearest_label = distance_transform_edt(labeled_array == 0, return_indices=True)
+
+    # Create a copy of the labeled array for expansion
+    expanded_labels = labeled_array.copy()
+
+    # Assign the nearest labels to expand the regions
+    expanded_labels[distances > 0] = labeled_array[tuple(nearest_label[:, distances > 0])]
+
+    return expanded_labels
+
+
+def find_neighbors(bacteria, time, rows, margin=50):
     # List to hold the rows of the dataframe
 
-    # Iterate over each node in the graph
-    for node in G.nodes():
-        # Get the label of the node
-        node_label = G.nodes[node]['label']
-        # Get the neighbors of the node
-        neighbors = list(G.neighbors(node))
-        # Append a tuple (node_label, neighbor_label) for each neighbor
-        for neighbor in neighbors:
-            neighbor_label = G.nodes[neighbor]['label']
-            rows.append((time + 1, node_label, neighbor_label))
+    # Generate unique colors for each bacterium
+    existing_colors = np.array([[0, 0, 0]])
+    colors = []
+    for _ in range(len(bacteria)):
+        new_color = generate_new_color(existing_colors)
+        colors.append(new_color)
+        existing_colors = np.vstack([existing_colors, new_color])
+
+    # Determine the minimum and maximum x and y values
+    x_min_val = min(
+        [bacterium['endpoint1'][0] for bacterium in bacteria] + [bacterium['endpoint2'][0] for bacterium in
+                                                                 bacteria])
+    y_min_val = min(
+        [bacterium['endpoint1'][1] for bacterium in bacteria] + [bacterium['endpoint2'][1] for bacterium in
+                                                                 bacteria])
+
+    max_x = max([bacterium['endpoint1'][0] for bacterium in bacteria] + [bacterium['endpoint2'][0] for bacterium in
+                                                                         bacteria])
+    max_y = max([bacterium['endpoint1'][1] for bacterium in bacteria] + [bacterium['endpoint2'][1] for bacterium in
+                                                                         bacteria])
+
+    # Calculate the dimensions of the image
+    image_width = int(max_x - x_min_val + 2 * margin)
+    image_height = int(max_y - y_min_val + 2 * margin)
+    image_shape = (image_height + 400, image_width + 400, 3)
+
+    # Initialize a blank image array
+    image_array = np.zeros(image_shape, dtype=np.uint8)
+
+    # Draw bacteria on the image array using their assigned colors
+    draw_bacteria_on_array(bacteria, colors, image_array, x_min_val, y_min_val, margin=margin)
+
+    # Efficiently label the image based on unique colors using downscaling
+    labeled_array = fast_color_to_label(image_array, colors)
+
+    # Expand the labels until they touch
+    expanded_labels = fast_expand_labels(labeled_array)
+
+    # Initialize the expanded image array for visualization
+    expanded_image_array = np.zeros_like(image_array)
+
+    # Convert colors to numpy array for easy indexing
+    colors_array = np.array(colors)
+
+    # Apply the colors to the expanded regions
+    mask = expanded_labels > 0
+    expanded_image_array[mask] = colors_array[expanded_labels[mask] - 1]
+
+    # Display the expanded objects together (commented out for script use)
+    # plt.imshow(expanded_rgb_image)
+    # plt.title('Expanded Bacteria Until Touch (RGB)')
+    # plt.axis('off')
+    # plt.show()
+
+    # Identify and report neighboring objects by ID
+    id_map = {idx + 1: bacteria[idx]['id'] for idx in range(len(bacteria))}
+    neighbors = {}
+    for region in regionprops(expanded_labels):
+        label_id = region.label
+        min_row, min_col, max_row, max_col = region.bbox
+        mask = expanded_labels[min_row:max_row, min_col:max_col] == label_id
+        expanded_mask = binary_dilation(mask)
+        neighboring_labels = np.unique(expanded_labels[min_row:max_row, min_col:max_col][expanded_mask])
+        neighboring_labels = neighboring_labels[neighboring_labels != 0]
+        neighboring_labels = neighboring_labels[neighboring_labels != label_id]
+        neighbors[id_map[label_id]] = [id_map[n] for n in neighboring_labels]
+
+    # Print the neighboring objects by ID
+    for bacterium_id, neighbor_list in neighbors.items():
+        for neighbor_id in neighbor_list:
+            rows.append((time + 1, bacterium_id, neighbor_id))
 
     return rows
 
 
 def neighbor_finders(pickle_folder):
 
-    bg_color = Color(1.0, 1.0, 1.0, alpha=1.0)
     rows = []
 
     for time, fname in enumerate(glob.glob(pickle_folder + '/*.pickle')):
 
-        G = networkx.Graph()
-        # fname = sys.argv[1]
+        bacteria = []
+
+        # Load the data from the pickle file
         data = pickle.load(open(fname, 'rb'))
         cs = data['cellStates']
-        it = iter(cs)
-        n = len(cs)
-        oname = fname.replace('.pickle', '_graph.pdf')
 
-        # print(("num_cells = " + str(n)))
+        x_vals = []
+        y_vals = []
 
-        cell_type = {}
-        pos_dict = {}
+        # Extract relevant data from the cell states
         for it in cs:
-            cell_type[cs[it].idx] = cs[it].cellType
-            pos_dict[cs[it].idx] = cs[it].pos[0:2]
+            bacteria.append(
+                {'id': cs[it].id, 'center': np.array(cs[it].pos[:2]), 'direction': np.array(cs[it].dir[:2]),
+                 'length': cs[it].length / 0.0144, 'width': cs[it].radius / 0.0144,
+                 'endpoint1': cs[it].ends[0][:2] / 0.0144,
+                 'endpoint2': cs[it].ends[1][:2] / 0.0144}
+            )
+            x_vals.extend([cs[it].ends[0][0], cs[it].ends[1][0]])
+            y_vals.extend([cs[it].ends[0][1], cs[it].ends[1][1]])
 
-        get_current_contacts(G, data)
-
-        # print(("num_contacts = " + str(networkx.number_of_edges(G))))
-        # degrees = list(G.degree().values())
-        # degrees = [degree for node, degree in G.degree()]
-        # print(("mean degree = " + str(np.mean(degrees))))
-        rows = find_neighbors(G, time, rows)
-        #
-        # breakpoint()
-
-        # if list(networkx.get_edge_attributes(G, 'color').items()):
-        #    edges, ecolor = list(zip(*list(networkx.get_edge_attributes(G, 'color').items())))
-        # ncolor = list(networkx.get_node_attributes(G, 'color').values())
-
-        # pdf = CellModellerPDFGenerator(oname, G, bg_color)
-        # world = (120, 120)
-        # page = (50, 50)
-        # center = (0, 0)
-
-        # pdf.draw_frame(oname, world, page, center)
-
-        # from this, I want the spatial position of every contact, and the graph of the cells that each cell is touching
-        # This can be all in one data structure - a graph where each vertex has a position, and each node has a cellState
+        rows = find_neighbors(bacteria, time, rows)
 
     # Create a dataframe from the list of tuples
     df = pd.DataFrame(rows, columns=['Image Number', 'First Object id', 'Second Object id'])
