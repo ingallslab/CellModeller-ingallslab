@@ -11,13 +11,13 @@ import subprocess
 
 
 setup(name='CellModeller',
-    install_requires=['numpy', 'scipy', 'pyopengl', 'mako', 'pyqt5', 'pyopencl', 'reportlab', 'matplotlib',
+    install_requires=['numpy<2', 'scipy', 'pyopengl', 'mako', 'pyqt5', 'pyopencl', 'reportlab', 'matplotlib',
                       'vtk',
                       'pyabc',
                       'opencv-python',
                       'scikit-image',
                       'alphashape'],
-    setup_requires=['numpy', 'scipy', 'pyopengl', 'mako', 'pyqt5', 'pyopencl', 'reportlab', 'matplotlib',
+    setup_requires=['numpy<2', 'scipy', 'pyopengl', 'mako', 'pyqt5', 'pyopencl', 'reportlab', 'matplotlib',
                     'vtk',
                     'pyabc',
                     'opencv-python',
