@@ -116,9 +116,9 @@ Example:
 def simulate_growth(cells, time_step):
   """
   @brief Simulate one time step of cell growth.
-  @param cells List of Cell objects to update
-  @param time_step Duration of simulation step
-  @return Updated list of Cell objects
+  @param cells List of Cell objects to update.
+  @param time_step Duration of simulation step.
+  @return Updated list of Cell objects.
   """
   pass
 ```

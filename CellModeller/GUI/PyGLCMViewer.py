@@ -40,38 +40,38 @@ from CellModeller.GUI.Renderers.BaseRenderers.Grid import Grid
 from CellModeller.GUI.Renderers.Renderer import Renderer, WriteFunc
 from CellModeller.Simulator import ModuleTypeError, Simulator
 
-## @brief Time step for simulation in seconds
+## @brief Time step for simulation in seconds.
 DT = 0.05
-## @brief Attempt to perform render loop this often per second
+## @brief Attempt to perform render loop this often per second.
 MAX_FRAME_RATE = 60
 
 ## @name UI constants
 # Change how users interact with GUI window.
 # @{
 
-## @brief Scale mouse coordinates to world units
+## @brief Scale mouse coordinates to world units.
 MOUSE_SCALE_FACTOR = 1 / 200
-## @brief Scale mouse wheel to world units
+## @brief Scale mouse wheel to world units.
 MOUSE_SCROLL_FACTOR = 1 / 100
-## @brief (Translational) in world units/second
+## @brief (Translational) in world units/second.
 KB_MVMT_SPD = 10
-## @brief In radians/second ...uhhh probably
+## @brief In radians/second ...uhhh probably.
 KB_ROT_SPD = 2
-## @brief Speed modifier when holding key (default: Shift)
+## @brief Speed modifier when holding key (default: Shift).
 KB_SLOW_SPD = 0.25
-## @brief Relative modifier (applies to both keyboard and mouse)
+## @brief Relative modifier (applies to both keyboard and mouse).
 HORZ_ROT_SPD = 0.5
-## @brief see above
+## @brief see above.
 VERT_ROT_SPD = 0.5
-## @brief see above
+## @brief see above.
 TILT_ROT_SPD = 0.5
-## @brief see above
+## @brief see above.
 HORZ_MVMT_SPD = 5
-## @brief see above
+## @brief see above.
 VERT_MVMT_SPD = 5
-## @brief see above (depth axis)
+## @brief see above (depth axis).
 Z_MVMT_SPD = 5
-## @brief For projection matrix (does this actually work?)
+## @brief For projection matrix (does this actually work?).
 FOV = 45
 ## @brief Closest scroll zoom distance.
 NEAR_DIST = 1
@@ -187,7 +187,7 @@ class PyGLCMViewer(QOpenGLWidget):
 
     def keyPressEvent(self, a0: Optional[QKeyEvent]) -> None:
         """
-        @brief from @c QtWidgets.QOpenGLWidget
+        @brief from @c QtWidgets.QOpenGLWidget.
         """
         if a0 is not None:
             if a0.key() in self.single_key_bindings:
@@ -198,7 +198,7 @@ class PyGLCMViewer(QOpenGLWidget):
 
     def keyReleaseEvent(self, a0: Optional[QKeyEvent]) -> None:
         """
-        @brief from @c QtWidgets.QOpenGLWidget
+        @brief from @c QtWidgets.QOpenGLWidget.
         """
         if a0 is not None:
             if a0.key() in self.keys_pressed:
@@ -223,7 +223,7 @@ class PyGLCMViewer(QOpenGLWidget):
 
     def wheelEvent(self, a0: Optional[QWheelEvent]) -> None:
         """
-        @brief from @c QtWidgets.QOpenGLWidget
+        @brief from @c QtWidgets.QOpenGLWidget.
         """
         if a0 is not None:
             degrees = a0.angleDelta()
@@ -233,7 +233,7 @@ class PyGLCMViewer(QOpenGLWidget):
 
     def mousePressEvent(self, a0: Optional[QMouseEvent]) -> None:
         """
-        @brief from @c QtWidgets.QOpenGLWidget
+        @brief from @c QtWidgets.QOpenGLWidget.
         """
         if a0 is not None:
             self.last_mouse_pt = a0.pos()
@@ -241,7 +241,7 @@ class PyGLCMViewer(QOpenGLWidget):
 
     def mouseMoveEvent(self, a0: Optional[QMouseEvent]) -> None:
         """
-        @brief from @c QtWidgets.QOpenGLWidget
+        @brief from @c QtWidgets.QOpenGLWidget.
         """
         if a0 is not None:
             delta = a0.pos() - self.last_mouse_pt
@@ -369,7 +369,7 @@ class PyGLCMViewer(QOpenGLWidget):
 
     def initializeGL(self) -> None:
         """
-        @brief from @c QtWidgets.QOpenGLWidget
+        @brief from @c QtWidgets.QOpenGLWidget.
         """
         self.initialize_renderers()
 
@@ -388,7 +388,7 @@ class PyGLCMViewer(QOpenGLWidget):
 
     def resizeGL(self, w: int, h: int) -> None:
         """
-        @brief from @c QtWidgets.QOpenGLWidget
+        @brief from @c QtWidgets.QOpenGLWidget.
         """
         gl.glViewport(0, 0, w, h)
         self.projection.setToIdentity()
@@ -399,7 +399,7 @@ class PyGLCMViewer(QOpenGLWidget):
 
     def paintGL(self) -> None:
         """
-        @brief from @c QtWidgets.QOpenGLWidget
+        @brief from @c QtWidgets.QOpenGLWidget.
         """
         gl.glClearColor(0.5, 0.5, 0.5, 0.0)
         gl.glClear(int(gl.GL_COLOR_BUFFER_BIT) | int(gl.GL_DEPTH_BUFFER_BIT))
@@ -463,7 +463,7 @@ class PyGLCMViewer(QOpenGLWidget):
     @pyqtSlot()
     def reset(self) -> None:
         """
-        @brief Handle for 'Reset' button
+        @brief Handle for 'Reset' button.
         """
         sim = Simulator(
             self.modName,
@@ -494,7 +494,6 @@ class PyGLCMViewer(QOpenGLWidget):
 
     @pyqtSlot()
     def loadPickle(self) -> None:
-        # TODO: check if using new or old sim!!!
         """
         @brief Handle for 'Load Pickle' button.
         @details Opens a file dialog chooser for a pickle file.
