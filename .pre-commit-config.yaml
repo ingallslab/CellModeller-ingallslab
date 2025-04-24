@@ -1,0 +1,17 @@
+
+repos:
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+        language_version: python3.10
+        files: "^(\
+          CellModeller/(GUI|Modules)(/.*)?\\.py|\
+          CellModeller/[^/]+\\.py|\
+          Examples/KyleP(/.*)?\\.py|\
+          Scripts/CellModellerGUI\\.py\
+          )$"
+        exclude: "^(\
+          CellModeller/GUI/Renderers\\.py|\
+          CellModeller/(CellState|Simulator|VTPWriter)\\.py\
+          )$"

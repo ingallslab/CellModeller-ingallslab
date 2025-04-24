@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "CellModeller"
+version = "5.0.0a1"
+description = "Multicellular agent-based modelling framework"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "BSD-3-Clause" }
+# Who is actually maintaining this now?
+# authors = [{ name = "Someone Smart", email = "good@coding.edu" }]
+dependencies = [
+  "numpy",
+  "scipy",
+  "pyopengl",
+  "mako",
+  "pyqt5",
+  "pyopencl",
+  "reportlab",
+  "matplotlib",
+  "vtk",
+  "pyabc",
+  "opencv-python",
+  "scikit-image",
+  "alphashape",
+]
+
+[project.optional-dependencies]
+dev = ["black>=24.3", "pre-commit"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+"CellModeller" = ["*.cl", "*.ui"]
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
