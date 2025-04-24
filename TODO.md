@@ -6,7 +6,6 @@ Please move finished items to unreleased section of `CHANGELOG.md`
 
 ### Planned
 
- - [ ] Refactor `Scripts/CellModellerGUI.py` to use `if __name__ == "__main__":`
  - [ ] Change `CellModeller.GUI.PyGLCMViewer` implementation
    - [ ] Use retained mode instead of immediate mode for OpenGL rendering
    - [ ] Improve performance by separating UI and sim in different threads
@@ -36,6 +35,7 @@ Please move finished items to unreleased section of `CHANGELOG.md`
  - [x] Update DoxygenConfig to version 1.10.0
    - [x] Include documentation from python docstrings
    - [x] Hide undocumented members from output
+ - [x] Refactor `Scripts/CellModellerGUI.py` to use `if __name__ == "__main__":`
 
 ---
 
