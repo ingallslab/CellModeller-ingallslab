@@ -2,3 +2,8 @@
 *.xml
 *.iml
 *.pyc
+
+.eggs
+html
+data
+*.egg-info
