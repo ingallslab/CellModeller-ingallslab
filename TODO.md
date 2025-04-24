@@ -6,19 +6,35 @@ Please move finished items to unreleased section of `CHANGELOG.md`
 
 ### Planned
 
- - [ ] Change `CellModeller.GUI.PyGLCMViewer` implementation
-   - [ ] Use retained mode instead of immediate mode for OpenGL rendering
-   - [ ] Improve performance by separating UI and sim in different threads
-   - [ ] Support for keyboard controls
+ - [ ] Add `CellArrays` class to manage cell data efficiently
+   - [ ] Define custom cell attributes using `numpy.dtype` declaration
+   - [ ] Preallocate memory for known cell attributes
+   - [ ] Manage centralized OpenCL shared memory between modules
+     - [ ] Require a context manager to synchronize
+   - [ ] Conform to `collection.abc.Sequence` specification to access cells
+   - [ ] Provide `memoryview`s to contiguous blocks of cell data for renderers
+ - [ ] Change `CellModeller.CellState` implementation
+   - [ ] Address underlying `numpy.ndarray` fields with object.attribute syntax
+   - [ ] Warn users about using undefined cell attributes
+ - [ ] Add new `CellModeller.Modules.ModuleProtocols`
+   - [ ] Support for custom cell events and flexible sim loop updates
+ - [ ] Add OpenGL retained mode classes and shaders
+   - [ ] Base wrapper class that handles shader compiling and memory management
+   - [ ] Allow renderers to define cell attributes for intended cell types
+ - [ ] Change `CellModeller.Simulator` implementation
+   - [ ] Integrate with `ModuleProtocol` and `UserModule` classes
+   - [ ] Check for custom cell events in update loop
+   - [ ] Forward access layer for renderers to cell data
 
 ### Working On
 
  - [ ] Add tasks to `TODO.md`
    - [x] Housekeeping guidelines
-   - [ ] Render pipeline overhaul
-   - [ ] New flexible module framework
+   - [x] Render pipeline overhaul
+   - [x] New flexible module framework
    - [ ] Filamenting support + module examples
    - [ ] Starting points for full app migration
+ - [ ] Remove save to pickles features while rewriting application
 
 ### Done
 
@@ -36,6 +52,11 @@ Please move finished items to unreleased section of `CHANGELOG.md`
    - [x] Include documentation from python docstrings
    - [x] Hide undocumented members from output
  - [x] Refactor `Scripts/CellModellerGUI.py` to use `if __name__ == "__main__":`
+ - [x] Remove `PyGLWidget` class
+ - [x] Change `CellModeller.GUI.PyGLCMViewer` implementation
+   - [x] Use retained mode instead of immediate mode for OpenGL rendering
+   - [x] Improve performance by separating UI and sim in different threads
+   - [x] Support for keyboard controls
 
 ---
 
