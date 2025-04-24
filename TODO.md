@@ -6,21 +6,8 @@ Please move finished items to unreleased section of `CHANGELOG.md`
 
 ### Planned
 
- - [ ] Add `CellArrays` class to manage cell data efficiently
-   - [ ] Define custom cell attributes using `numpy.dtype` declaration
-   - [ ] Preallocate memory for known cell attributes
-   - [ ] Manage centralized OpenCL shared memory between modules
-     - [ ] Require a context manager to synchronize
-   - [ ] Conform to `collection.abc.Sequence` specification to access cells
-   - [ ] Provide `memoryview`s to contiguous blocks of cell data for renderers
- - [ ] Change `CellModeller.CellState` implementation
-   - [ ] Address underlying `numpy.ndarray` fields with object.attribute syntax
-   - [ ] Warn users about using undefined cell attributes
  - [ ] Add new `CellModeller.Modules.ModuleProtocols`
    - [ ] Support for custom cell events and flexible sim loop updates
- - [ ] Add OpenGL retained mode classes and shaders
-   - [ ] Base wrapper class that handles shader compiling and memory management
-   - [ ] Allow renderers to define cell attributes for intended cell types
  - [ ] Change `CellModeller.Simulator` implementation
    - [ ] Integrate with `ModuleProtocol` and `UserModule` classes
    - [ ] Check for custom cell events in update loop
@@ -35,6 +22,18 @@ Please move finished items to unreleased section of `CHANGELOG.md`
    - [ ] Filamenting support + module examples
    - [ ] Starting points for full app migration
  - [ ] Remove save to pickles features while rewriting application
+ - [ ] Add `CellArrays` class to manage cell data efficiently
+   - [ ] Define custom cell attributes using `numpy.dtype` declaration
+   - [x] Preallocate memory for known cell attributes
+   - [x] Manage centralized OpenCL shared memory between modules
+     - [x] Require a context manager to synchronize
+   - [x] Conform to `collection.abc.Sequence` specification to access cells
+   - [ ] Provide `memoryview`s to contiguous blocks of cell data for renderers
+ - [x] Add OpenGL retained mode classes and shaders
+   - [x] Base wrapper class that handles shader compiling and memory management
+     - [ ] Default class for GUI background grid
+     - [ ] Default class for rod-shaped cells
+   - [x] Allow renderers to define cell attributes for intended cell types
 
 ### Done
 
@@ -57,6 +56,10 @@ Please move finished items to unreleased section of `CHANGELOG.md`
    - [x] Use retained mode instead of immediate mode for OpenGL rendering
    - [x] Improve performance by separating UI and sim in different threads
    - [x] Support for keyboard controls
+ - [x] Change `CellModeller.CellState` implementation
+   - [x] Address underlying `numpy.ndarray` fields with object.attribute syntax
+   - [x] Warn users about using undefined cell attributes
+ - [x] Remove immediate mode renderers in `CellModeller/GUI/Renderers.py`
 
 ---
 
