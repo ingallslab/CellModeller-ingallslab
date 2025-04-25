@@ -1,536 +1,364 @@
-from .CellState import CellState
-import copy
-import pyopencl as cl
-import sys
-import os
-import pickle
-import csv
-import numpy
-import inspect
-import imp
-import configparser
-import importlib
-
-
-class Simulator:
-    """
-This class is in charge of running the simulation, creating the various models
-and stepping them forward in time. It is the control interface for the gui
-or script that is running the simulation.
-
-Stores a map from cell_id to CellState, which stores the current simulation
-state of each cell.
-
-Constructed on a user-defined python file. This file implements a
-function setup(Simulator, Gui) that constructs the requiredx modules
-(Regulator, Signalling, Integrator), and calls Simulator.init(). It
-can also create Renderers and add them by calling
-Simulator.addRenderer(renderer) so that the simulation can be
-visualised.
-
-Interfaced with FEniCS (or dolfin). There are some hard-coded naming conventions in here, so make sure:
-    1. The PDESolver file is named "yourModule_DolfinPDESolver.py"
-    2. The PDESolver file is located in the same directory as yourModule.py
-    3. The solver class in the PDESolver file is named "DolfinSolver"
-    
-If running a parametric sweep with psweep or pyabc, parameters must be inputted as a dictionary {'x': ..., 'y': ...}
-A function called setparams must be included in the module file, and the parameters must be defined as global variables in the module.
+"""
+@brief Main simulator class for CellModeller.
+@details Integrates all components of the application:
+        - OpenGL GUI and renderers
+        - modules and cell events
+        - OpenCL arrays and cell attributes
 """
 
-    ## Construct an empty simulator object. This object will not be able to
-    # do anything yet unti we use 'init' method to specify the models for
-    # physical interaction, genetic circuit, diffusion and integrator.
-    def __init__(self, \
-                 moduleName, \
-                 dt, \
-                 pickleSteps=50, \
-                 outputDirName=None, \
-                 moduleStr=None, \
-                 saveOutput=False, \
-                 clPlatformNum=0, \
-                 clDeviceNum=0, \
-                 is_gui=False, \
-                 psweep=False, \
-                 params={}):
-        # Is this simulator running in a gui?
-        self.is_gui = is_gui
+import importlib
+import importlib.util
+import inspect
+import os
+import sys
+from collections.abc import Callable
+from time import perf_counter
 
-        # No models specified yet
-        self.reg = None
-        self.phys = None
-        self.sig = None
-        self.integ = None
-        self.pickleSteps = pickleSteps
+import numpy as np
 
-        # No cells yet, initialise indices and empty lists/dicts, zero counters
-        self._next_label = 1
-        self._next_id = 1
-        self._next_idx = 0
-        self.idToIdx = {}
-        self.idxToId = {}
-        self.cellStates = {}
-        self.renderers = []
-        self.stepNum = 0
-        self.lineage = {}
+from CellModeller.CellState import CellArrays, CellManager, CellState, StateSequence
+from CellModeller.GUI.Renderers.Renderer import Renderer, WriteFunc
+from CellModeller.Modules.ModuleProtocols import (
+    BoundEventHandler,
+    ModuleProtocol,
+    UserModule,
+)
 
-        # Time step
-        self.dt = dt
+## @brief Type signature for functions that are called before cell events.
+# @param sim The CellManager instance for creating/deleting and accessing
+#       cell states.
+# @param cell The cell that triggered the event.
+# @return A tuple of cells involved in the event, which may simply be the
+#       triggering cell by itself, other cells it interacts with, or even new
+#       cells created as a result of the event.
+PreEvent = Callable[[CellManager[StateSequence], CellState], tuple[CellState, ...]]
+## @brief Type signature for functions that are called after cell events.
+# @param sim The CellManager instance for creating/deleting and accessing
+#       cell states.
+# @param cells A tuple of cells involved in the event.
+PostEvent = Callable[[CellManager[StateSequence], tuple[CellState, ...]], None]
 
-        # Parametric sweep
-        self.psweep = psweep
-        self.params = params
 
-        if "CMPATH" in os.environ:
-            self.cfg_file = os.path.join(os.environ["CMPATH"], 'CMconfig.cfg')
+def event_decorator(event_name: str, pre_or_post: str) -> Callable:
+    def decorator(handler: PreEvent | PostEvent):
+        setattr(handler, pre_or_post, event_name)
+        return handler
+
+    return decorator
+
+
+def pre_event(event_name: str) -> Callable[[PreEvent], PreEvent]:
+    """
+    @brief Function decorator for simulator events.
+    @details Once an event is triggered, it is called for all modules that it
+            occurs in, but the flag should be turned off in at least on of them,
+            or in a simulator event handler, to avoid unintentionally triggering
+            again in the next time step.
+    @remark pre and post events are not called if a cell event does not occur
+            in any loaded_modules!
+    @note Unlike cell event handlers, simulator events are declared at the
+            top level of files and do not accept a self parameter. There cannot
+            be multiple PreEvent or PostEvent handlers for a cell event. Instead,
+            the last found instance of each is the only one that will be called.
+            The search order is as follows:
+                - Simulator this class
+                - ModuleProtocol in order of loaded_modules
+                - UserModule for this simulation
+    """
+    return event_decorator(event_name, "_pre_event")
+
+
+def post_event(event_name: str) -> Callable[[PostEvent], PostEvent]:
+    """
+    @brief Function decorator for simulator events.
+    @details see above.
+    """
+    return event_decorator(event_name, "_post_event")
+
+
+class ModuleTypeError(Exception):
+    """
+    @brief Empty error class for passing a specific error to PyGLCMViewer.
+    """
+
+    pass
+
+
+class Simulator(CellManager[CellArrays]):
+    """
+    @brief Runs the simulation.
+    @details Does all of the wonderful stuff it's supposed to do!
+    @todo Write some better documentation for this class maybe? (incl. params)
+    """
+
+    def load_user_module(self, module_name: str, module_str: str) -> None:
+        """
+        @brief Loads UserModule.
+        @details Retains ability to load from string for when pickles get
+                implemented again.
+        @param module_name Name of UserModule to load.
+        @param module_str Contents of file as string.
+        """
+        if module_str:
+            print("Importing model %s from string" % (module_name))
+            spec = importlib.util.spec_from_loader(module_name, loader=None)
+            if spec is None:
+                raise RuntimeError()
+            module = importlib.util.module_from_spec(spec)
+            # is this uhhh... safe?
+            exec(module_str, module.__dict__)
         else:
-            self.cfg_file = 'CellModeller/CMconfig.cfg'
-        if not self.init_cl(platnum=clPlatformNum, devnum=clDeviceNum):
-            print("Couldn't initialise OpenCL context")
-            return
-
-        # Two ways to specify a module (model):
-        self.moduleName = moduleName  # Import via standard python
-        self.moduleStr = moduleStr  # Import stored python code string (from a pickle usually)
-
-        if self.moduleStr:
-            print("Importing model %s from string" % (self.moduleName))
-            self.module = imp.new_module(moduleName)
-            exec(moduleStr, self.module.__dict__)
-        else:
-            # In case the moduleName is a path to a python file:
+            # setup model module
+            # In case the module_name is a path to a python file:
             # Get path and file name
-            (path, name) = os.path.split(self.moduleName)  # path = blank; name = module (without the .py)
-
+            (path, name) = os.path.split(module_name)
+            # path = blank; name = module (without the .py)
             # Append path to PYTHONPATH, if no path do nothing
             if path:
                 if path not in sys.path:
                     sys.path.append(path)
             # Remove .py extension if present
-            self.moduleName = str(name).split('.')[0]
-            print("Importing model %s" % (self.moduleName))
-            if self.moduleName in sys.modules:
-                self.module = sys.modules[self.moduleName]
-                importlib.reload(self.module)
+            module_name = str(name).split(".")[0]
+            print("Importing model %s" % (module_name))
+
+            if module_name in sys.modules:
+                module = sys.modules[module_name]
+                importlib.reload(module)
             else:
-                self.module = __import__(self.moduleName, globals(), locals(), [], 0)
+                module = __import__(module_name, globals(), locals(), [], 0)
 
-        # Optional import of PDEDolfinSolver
-        self.pdeModuleName = self.moduleName + '_DolfinPDESolver'  # make sure to use this naming convention when making the PDESolver files
+        # search for UserModule subclass in module file
+        module_class = None
+        for name in dir(module):
+            attr = getattr(module, name)
+            if (
+                inspect.isclass(attr)
+                and issubclass(attr, UserModule)
+                and not inspect.isabstract(attr)
+            ):
+                module_class = attr
+        if not module_class:
+            raise ModuleTypeError()
+        self.user_module = module_class()
 
-        try:
-            self.pdeModule = __import__(self.pdeModuleName, globals(), locals(), [], 0)
-            print("Importing DolfinPDESolver %s" % self.pdeModuleName)
-        except:
-            print("No Dolfin solver found")
-            pass
+    user_module: UserModule
+    cell_states: CellArrays
+    cell_events: dict[str, tuple[int, list[BoundEventHandler]]]
 
-        # TJR: What is this invar thing? I have never seen this used...
-        # setup the simulation here:
-        # if invar:
-        #    self.module.setup(self, invar)
-        # else:
+    def __init__(
+        self,
+        moduleName: str,
+        moduleStr: str = "",
+        clPlatformNum: int = 0,
+        clDeviceNum: int = 0,
+        verbosity: int = 0,
+        is_gui: bool = False,
+        **_,
+    ):
+        self.clPlatformNum = clPlatformNum
+        self.clDeviceNum = clDeviceNum
 
-        # Set up the data output directory
-        self.dataOutputInitialised = False
-        self.outputDirName = outputDirName
-        self.setSaveOutput(saveOutput)
+        self.stepNum: int = 0
+        self.paused: bool = False
+        self.write_since_last_buffer_copy: bool = True
+        self.start_time: float = perf_counter()
 
-        # Set model parameters if doing a parametric sweep
-        if self.psweep == True:
-            self.module.setparams(params)
-            
-        # Call the user-defined setup function on ourself
-        self.module.setup(self)
-       
-    def setSaveOutput(self, save):
-        self.saveOutput = save
-        if save and (not self.dataOutputInitialised):
-            self.init_data_output()
+        self.load_user_module(moduleName, moduleStr)
+        if not self.user_module.loaded_modules:
+            print("No simulation modules loaded!")
+        if not self.user_module.renderers and is_gui:
+            print("No renderers added to GUI!")
+        if not self.user_module.initial_cells:
+            print("No cells added to initial distribution!")
+        self.pickleSteps = self.user_module.pickle_steps
 
-    def init_data_output(self):
-        import time
-        startTime = time.localtime()
-        outputFileRoot = self.outputDirName if self.outputDirName else self.moduleName + '-' + time.strftime(
-            '%y-%m-%d-%H-%M', startTime)
-        if self.psweep:
-            self.outputDirPath = outputFileRoot
-        else:
-            self.outputDirPath = os.path.join('data', outputFileRoot)
+        self.verbosity = max(verbosity, self.user_module.verbosity)
 
-        # Commented out to allow exporting to current directory of simulation
-        '''
-        if 'CMPATH' in os.environ:
-            self.outputDirPath = os.path.join(os.environ["CMPATH"], self.outputDirPath)
-        '''
+        # handle edge case of every cell dividing in a single timestep
+        self.orig_max_cells = self.user_module.max_cells
+        self.user_module.max_cells = 2 ** int(np.ceil(np.log2(self.orig_max_cells)) + 1)
 
-        # Add a number to end of dir name if it already exists 
-        label = 2
-        while os.path.exists(self.outputDirPath):
-            if label > 2:
-                self.outputDirPath = self.outputDirPath[:-2] + "_" + str(label)
-            else:
-                self.outputDirPath = self.outputDirPath + "_" + str(label)
-            label += 1
-        os.makedirs(self.outputDirPath)
+        # merge defined cell attributes and custom cell events
+        # also do runtime checks that classes implement ABC valid
+        cell_attrs: dict[str, np.dtype] = {}
+        self.cell_events = {}
+        # renderers first, only cell attributes
+        for renderer in self.user_module.renderers:
+            if not isinstance(renderer, Renderer):
+                raise RuntimeError(f"{renderer.__class__.__name__} not a Renderer")
+            if renderer.cell_attrs is not None:
+                cell_attrs |= {renderer.__class__.__name__: renderer.cell_attrs}
+        # include usermodule last in list (for update loop as well!)
+        self.user_module.loaded_modules += [self.user_module]
+        for module in self.user_module.loaded_modules:
+            if not isinstance(module, ModuleProtocol):
+                raise RuntimeError(f"{module.__class__.__name__} is not ModuleProtocol")
+            if module.cell_attrs is not None:
+                cell_attrs |= {module.__class__.__name__: module.cell_attrs}
+            # check for cell events in module methods
+            for name in dir(module):
+                attr = getattr(module, name)
+                if hasattr(attr, "_cell_event"):
+                    event_name, priority = getattr(attr, "_cell_event")
+                    if event_name not in self.cell_events:
+                        self.cell_events[event_name] = (-priority, [])
+                    prev_priority, event_handlers = self.cell_events[event_name]
+                    priority = min(-priority, prev_priority)
+                    event_handlers += [attr]
+                    self.cell_events[event_name] = (prev_priority, event_handlers)
+        # sort cell events by priority
+        self.cell_events = dict(sorted(self.cell_events.items(), key=lambda x: x[1][0]))
 
-        # write a copy of the model into the dir (for reference), 
-        # this goes in the pickle too (and gets loaded when a pickle is loaded)
-        if self.moduleStr:
-            self.moduleOutput = self.moduleStr
-        else:
-            self.moduleOutput = inspect.getsource(self.module)
-        open(os.path.join(self.outputDirPath, self.moduleName), 'w').write(self.moduleOutput)
+        # find pre and post events, search order this module < loaded < user
+        self.pre_handlers: dict[str, PreEvent] = {}
+        self.post_handlers: dict[str, PostEvent] = {}
+        search_dirs = [self] + self.user_module.loaded_modules
+        namespaces = set(module.__class__.__module__ for module in search_dirs)
+        for namespace in namespaces:
+            for name in dir(sys.modules[namespace]):
+                attr = getattr(sys.modules[namespace], name)
+                if hasattr(attr, "_pre_event"):
+                    self.pre_handlers[getattr(attr, "_pre_event")] = attr
+                if hasattr(attr, "_post_event"):
+                    self.post_handlers[getattr(attr, "_post_event")] = attr
 
-        self.dataOutputInitialised = True
+        # instantiate cell array to construct final dtype
+        self.cell_states = CellArrays(
+            self.verbosity,
+            self.user_module.max_cells,
+            self.clPlatformNum,
+            self.clDeviceNum,
+            cell_attrs=cell_attrs,
+        )
 
-        # Save parameters to txt in psweep in case sims don't finish
-        if self.psweep:
-            open(os.path.join(self.outputDirPath, 'params.txt'), 'w').write(str(self.params))
+        # set global params and pass to all modules
+        params = self.user_module.get_sim_attrs()
+        params.verbosity = self.verbosity
+        params.dtype = self.cell_states.dtype
+        params.using_svm = self.cell_states.using_svm
+        if self.cell_states.using_svm:
+            params.cl_context = self.cell_states.context
+            params.cl_queue = self.cell_states.queue
+        # this also calls on_sim_ready for each module
+        for module in self.user_module.loaded_modules:
+            module.set_sim_attrs(params, self.pause)
 
-    # Get a label for the next cell family tree to be created
-    # Ati
-    def next_label(self):
-        label = self._next_label
-        self._next_label += 1
-        return label
+        # add starting cells to simulation
+        with self.cell_states:
+            for cell in self.user_module.initial_cells:
+                # initializes cell in each module as well
+                view = self.new_cell()
+                # dict values override defaults however
+                for key, val in cell.items():
+                    setattr(view, key, val)
 
-    ## Get an id for the next cell to be created
-    def next_id(self):
-        id = self._next_id
-        self._next_id += 1
-        return id
+    def pause(self) -> None:
+        """
+        @brief Handle to pause_func for loaded_modules.
+        """
+        self.paused = True
 
-    ## Get the index (into flat arrays) of the next cell to be created
-    def next_idx(self):
-        idx = self._next_idx
-        self._next_idx += 1
-        return idx
+    def step(self, dt: float) -> None:
+        """
+        @brief Advance the simulation by dt seconds real time.
+        @details This is the main event loop and also most time consuming part
+                of the simulation. Converts dt to simulation time before calling
+                sim_step functions in each module.
+        """
+        dt = self.user_module.time_factor * dt
+        self.start_time = perf_counter()
 
-    # Currently, the user-defined regulation module creates the
-    # biophysics, regulation, and signalling objects in a function
-    # setup().
-    #
-    # We pass in the empty simulator object, ie. setup(sim)
-    # and have the user-defined func initialise the 3 modules
+        # OpenCL kernels if available
+        if self.cell_states.using_svm:
+            for module in self.user_module.loaded_modules:
+                module.sim_step_cl(dt, self.cell_states.get_buffer())
 
-    ## Specify models to be used by simulator object. The four inputs are
-    # 'phys' = physical model of cell iteractions
-    # 'reg' = regulatory model of biochemical circuit in the cell
-    # 'sig' = signaling model of intercellular chemical reaction diffusion.
-    # 'integ' = integrator
-    # 'solverParams' = FEniCS solver parameters
+        # context manager for mapping cell arrays from OpenCL memory
+        with self.cell_states as sim_cells:
+            # regular step function for each module
+            for module in self.user_module.loaded_modules:
+                module.sim_step(dt, sim_cells)
 
-    # Updated to be interfaced with FEniCS
-    def init(self, phys, reg, sig, integ, solverParams=None):
-        self.phys = phys
-        self.reg = reg
-        self.sig = sig
+            # check each cell for configured events
+            for cell in sim_cells:
+                for event in self.cell_events:
+                    if getattr(cell, event):
+                        # if no pre event found only apply to single cell
+                        if event in self.pre_handlers:
+                            cells = self.pre_handlers[event](self, cell)
+                        else:
+                            cells = (cell,)
+                        for event_handler in self.cell_events[event][1]:
+                            event_handler(cells)
+                        if event in self.post_handlers:
+                            self.post_handlers[event](self, cells)
 
-        self.phys.setRegulator(reg)
+            # if exceed user-defined max cell count pause
+            if sim_cells.cell_count >= self.orig_max_cells:
+                self.paused = True
+                print(f"Reached max cell count of {self.orig_max_cells}!")
 
-        self.reg.setBiophysics(phys)
-
-        if integ:
-            self.integ = integ
-            self.integ.setRegulator(reg)
-
-        if self.sig:
-            self.sig.setBiophysics(phys)
-            self.sig.setRegulator(reg)
-            self.integ.setSignalling(sig)
-            self.reg.setSignalling(sig)
-
-        if solverParams:
-            self.solver = self.pdeModule.DolfinSolver(solverParams)
-        else:
-            self.solver = None
-
-    ## Set up the OpenCL contex, the configuration is set up the first time, and is saved in the config file
-    def init_cl(self, platnum, devnum):
-        # Check that specified platform exists
-        platforms = cl.get_platforms()
-        if len(platforms) <= platnum:
-            print("Specified OpenCL platform number (%d) does not exist.")
-            print("Options are:")
-            for p in range(len(platforms)):
-                print("%d: %s" % (p, str(platforms[p])))
-            return False
-        else:
-            platform = platforms[platnum]
-
-        # Check that specified device exists on that platform
-        devices = platforms[platnum].get_devices()
-        if len(devices) <= devnum:
-            print("Specified OpenCL device number (%d) does not exist on platform %s." % (devnum, platform))
-            print("Options are:")
-            for d in range(len(devices)):
-                print("%d: %s" % (d, str(devices[d])))
-            return False
-        else:
-            device = devices[devnum]
-
-        # Create a context and queue
-        self.CLContext = cl.Context(properties=[(cl.context_properties.PLATFORM, platform)],
-                                    devices=[device])
-        self.CLQueue = cl.CommandQueue(self.CLContext)
-        print("Set up OpenCL context:")
-        print("  Platform: %s" % (str(platform.name)))
-        print("  Device: %s" % (str(device.name)))
-        return True
-
-    ## Get the OpenCL context and queue for running kernels 
-    def getOpenCL(self):
-        return (self.CLContext, self.CLQueue)
-
-    ## set cell states from a given dict
-    def setCellStates(self, cellStates):
-        # Set cell states, e.g. from pickle file
-        # this sets them on the card too
-        self.cellStates = {}
-        self.cellStates = cellStates
-        idx_map = {}
-        id_map = {}
-        idmax = 0
-        for id, state in cellStates.items():
-            idx_map[state.id] = state.idx
-            id_map[state.idx] = state.id
-            if id > idmax:
-                idmax = id
-        self.idToIdx = idx_map
-        self.idxToId = id_map
-        self._next_id = idmax + 1
-        self._next_idx = len(cellStates)
-        self.reg.cellStates = cellStates
-        self.phys.load_from_cellstates(cellStates)
-
-    ## Add a graphics renderer - this should not be here --> GUI
-    def addRenderer(self, renderer):
-        self.renderers.append(renderer)
-
-    ## Reset the simulation back to initial conditions
-    def reset(self):
-        # Delete existing models
-        if self.phys:
-            del self.phys
-        if self.sig:
-            del self.sig
-        if self.integ:
-            del self.integ
-        if self.reg:
-            del self.reg
-
-        if not self.moduleStr:
-            # This will take up any changes made in the model file
-            importlib.reload(self.module)
-        else:
-            # TJR: Module loaded from pickle, cannot reset?
-            pass
-
-        # Lose old cell states
-        self.cellStates = {}
-        # Recreate models via module setup
-        self.module.setup(self)
-
-    # Divide a cell to two daughter cells
-    def divide(self, pState):
-        pState.divideFlag = False
-        pid = pState.id
-        d1id = self.next_id()
-        d2id = self.next_id()
-        d1State = copy.deepcopy(pState)
-        d2State = copy.deepcopy(pState)
-        d1State.id = d1id
-        d2State.id = d2id
-
-        # label of daughters
-        # Ati
-        d1State.label = pState.label
-        d2State.label = pState.label
-
-        # reset cell ages
-        d1State.cellAge = 0
-        d2State.cellAge = 0
-        # inherit effGrowth
-        d1State.effGrowth = pState.effGrowth
-        d2State.effGrowth = pState.effGrowth
-
-        self.lineage[d1id] = pid
-        self.lineage[d2id] = pid
-
-        # Update CellState map
-        self.cellStates[d1id] = d1State
-        self.cellStates[d2id] = d2State
-        del self.cellStates[pid]
-
-        # Update indexing, reuse parent index for d1
-        d1State.idx = pState.idx
-        self.idToIdx[d1id] = pState.idx
-        self.idxToId[pState.idx] = d1id
-        d2State.idx = self.next_idx()
-        self.idToIdx[d2id] = d2State.idx
-        self.idxToId[d2State.idx] = d2id
-        del self.idToIdx[pid]
-
-        # Divide the cell in each model
-        asymm = getattr(pState, 'asymm', [1, 1])
-        self.phys.divide(pState, d1State, d2State, f1=asymm[0], f2=asymm[1])
-        if self.integ:
-            self.integ.divide(pState, d1State, d2State)
-        self.reg.divide(pState, d1State, d2State)
-
-    # From WPJS -AY
-    def kill(self, state):
-
-        # carry out any actions listed in module
-        self.reg.kill(state)
-
-        # mask the cell so that the mechanics algorithm ignores it
-        self.phys.delete(state)
-
-        # delete all instance of cell at cellState level
-        cid = state.id
-        # print('Removing cell with id %i' % state.id)
-        del self.cellStates[cid]
-
-    ## Add a new cell to the simulator
-    def addCell(self, cellType=0, cellAdh=0, cellForce=(0,0,0,0), length=3.5, **kwargs):
-        cid = self.next_id()
-        cs = CellState(cid)
-        cs.length = length
-        cs.cellType = cellType
-        cs.cellAdh = cellAdh
-        cs.cellForce = cellForce
-        cs.idx = self.next_idx()
-        # add new label to next cell family tree
-        cs.label = self.next_label()
-        self.idToIdx[cid] = cs.idx
-        self.idxToId[cs.idx] = cid
-        self.cellStates[cid] = cs
-        if self.integ:
-            self.integ.addCell(cs)
-        self.reg.addCell(cs)
-        if self.sig:
-            self.sig.addCell(cs)
-        self.phys.addCell(cs, **kwargs)
-
-    # ---
-    # Some functions to modify existing cells (e.g. from GUI)
-    # Eventually prob better to have a generic editCell() that deals with this stuff
-    #
-    def moveCell(self, cid, delta_pos):
-        if cid in self.cellStates:
-            self.phys.moveCell(self.cellStates[cid], delta_pos)
-
-    # Proceed to the next simulation step
-    # This method is where objects phys, reg, sig and integ are called.
-    # It is the simulator's main loop
-    def step(self):
-        self.reg.step(self.dt)  # calls user-defined update function in CM module
-        states = dict(self.cellStates)
-        for (cid, state) in list(states.items()):
-            state.time = self.stepNum * self.dt
-
-            # From WPJS -AY
-            if state.deathFlag:  # priority 1: death
-                self.kill(state)
-
-            if state.divideFlag:
-                self.divide(state)  # neighbours no longer current
-
-            self.phys.set_cells()
-
-        while not self.phys.step(self.dt):  # neighbours are current here
-            pass
-        if self.sig:
-            self.sig.step(self.dt)
-        if self.integ:
-            self.integ.step(self.dt)
-
-        if self.solver:
-            self.reg.solvePDEandGrowth()
-
-        if self.saveOutput and self.stepNum % self.pickleSteps == 0:
-            self.writePickle()
-
+        self.cell_states.step(dt)
+        self.write_since_last_buffer_copy = True
         self.stepNum += 1
-        return True
 
-    ## Import cells to the simulator from csv file. The file contains a list of 7-coordinates {pos,dir,len} (comma delimited) of each cell - also, there should be no cells around - ie run this from an empty model instead of addcell
-    def importCells_file(self, filename):
-        f = open(filename, 'rU')
-        list = csv.reader(f, delimiter=',')
-        for row in list:
-            cpos = [float(row[0]), float(row[1]), float(row[2])]
-            cdir = [float(row[3]), float(row[4]), float(row[5])]
-            clen = float(row[6])  # radius should be removed from this in the analysis
-            ndir = cdir / numpy.linalg.norm(cdir)  # normalize cell dir just in case
-            # this should probably also check for overlaps
-            self.addCell(pos=tuple(cpos), dir=tuple(ndir), length=clen)
+        if self.verbosity > 2:
+            print(f"sim step took {perf_counter() - self.start_time:.2f}s")
 
-    ## Write current simulation state to an output file
-    def writePickle(self, csv=False):
-        filename = os.path.join(self.outputDirPath, 'step-%05i.pickle' % self.stepNum)
-        outfile = open(filename, 'wb')
-        data = {}
-        data['cellStates'] = self.cellStates
-        data['stepNum'] = self.stepNum
-        data['lineage'] = self.lineage
-        data['moduleStr'] = self.moduleOutput
-        data['moduleName'] = self.moduleName
-        if self.integ:
-            #    print("Writing new pickle format")
-            data['specData'] = self.integ.levels
-        if self.sig:
-            data['sigGridOrig'] = self.sig.gridOrig
-            data['sigGridDim'] = self.sig.gridDim
-            data['sigGridSize'] = self.sig.gridSize
-        if self.sig and self.integ:
-            data['sigGrid'] = self.integ.signalLevel
-            data['sigData'] = self.integ.cellSigLevels
-            data['sigGrid'] = self.integ.signalLevel
-        pickle.dump(data, outfile, protocol=-1)
-        # output csv file with cell pos,dir,len - sig?
+    def write_to_buffer(self, buffers_to_write: dict[str, list[WriteFunc]]) -> None:
+        """
+        @brief Method to pass cell data to OpenGL renderers.
+        @param buffers_to_write Dict of field names and corresponding buffer
+                copy functions to pass memoryview of blocks to.
+        """
+        if self.write_since_last_buffer_copy:
+            with self.cell_states.read_blocks(list(buffers_to_write.keys())) as blocks:
+                for block, write_funcs in zip(blocks, buffers_to_write.values()):
+                    for write_func in write_funcs:
+                        write_func(block)
 
-    # Populate simulation from saved data pickle
-    def loadGeometryFromPickle(self, data):
-        self.setCellStates(data['cellStates'])
-        self.lineage = data['lineage']
-        idx_map = {}
-        id_map = {}
-        idmax = 0
-        for id, state in data['cellStates'].items():
-            idx_map[state.id] = state.idx
-            id_map[state.idx] = state.id
-            if id > idmax:
-                idmax = id
-        self.idToIdx = idx_map
-        self.idxToId = id_map
-        self._next_id = idmax + 1
-        self._next_idx = len(data['cellStates'])
-        if self.integ:
-            self.integ.setCellStates(self.cellStates)
-        if self.sig:
-            self.integ.setCellStates(self.cellStates)
+            self.write_since_last_buffer_copy = False
 
-    # Populate simulation from saved data pickle
-    def loadFromPickle(self, data):
-        self.setCellStates(data['cellStates'])
-        self.lineage = data['lineage']
-        self.stepNum = data['stepNum']
-        idx_map = {}
-        id_map = {}
-        idmax = 0
-        for id, state in data['cellStates'].items():
-            idx_map[state.id] = state.idx
-            id_map[state.idx] = state.id
-            if id > idmax:
-                idmax = id
-        self.idToIdx = idx_map
-        self.idxToId = id_map
-        self._next_id = idmax + 1
-        self._next_idx = len(data['cellStates'])
-        if self.integ:
-            if 'sigData' in data:
-                self.integ.setLevels(data['specData'], data['sigData'])
-            elif 'specData' in data:
-                self.integ.setLevels(data['specData'])
+    def new_cell(self) -> CellState:
+        """
+        @brief Required by CellManager abstract class.
+        @details Adds a new cell to cell arrays and calls new_cell() on each
+                attached module to initialize it.
+        @return The newly created CellState.
+        """
+        cell = self.cell_states.new_cell()
+        for module in self.user_module.loaded_modules:
+            module.new_cell(cell)
+        return cell
+
+    def del_cell(self, cell: CellState) -> None:
+        """
+        @brief Required by CellManager abstract class.
+        @details Does not interact with modules as modules are not required to
+                define a method for removing cells. However, they may handle
+                the remove_flag event if they need to.
+        """
+        self.cell_states.del_cell(cell)
+
+
+@pre_event("divide_flag")
+def divide(sim: CellManager[StateSequence], cell: CellState) -> tuple[CellState, ...]:
+    """
+    @brief PreEvent for generating daughter cells for divide_flag.
+    @note Simply marking a flag will not trigger pre or post events unless at
+            least 1 module handles that event, even if it is an empty function.
+    """
+    daughter1 = sim.new_cell()
+    daughter2 = sim.new_cell()
+    cell.remove_flag = True
+    return (cell, daughter1, daughter2)
+
+
+@post_event("remove_flag")
+def remove(sim: CellManager[StateSequence], cells: tuple[CellState, ...]):
+    """
+    @brief PostEvent for removing cells due to remove_flag.
+    @note see above.
+    """
+    for cell in cells:
+        sim.del_cell(cell)

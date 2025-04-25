@@ -12,6 +12,5 @@ repos:
           Scripts/CellModellerGUI\\.py\
           )$"
         exclude: "^(\
-          CellModeller/GUI/Renderers\\.py|\
-          CellModeller/(CellState|Simulator|VTPWriter)\\.py\
+          CellModeller/VTPWriter\\.py\
           )$"

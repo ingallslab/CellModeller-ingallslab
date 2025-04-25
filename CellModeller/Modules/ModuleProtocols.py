@@ -16,13 +16,6 @@ import pyopencl as cl
 from CellModeller.CellState import CellState
 from CellModeller.GUI.Renderers.Renderer import Renderer
 
-## @brief Generic TypeVar for classes implementing cell events.
-SelfT = TypeVar("SelfT", bound="ModuleProtocol")
-## @brief Type signature for functions that respond to cell events.
-EventHandler = Callable[[SelfT, tuple[CellState, ...]], None]
-## @brief Type signature for bound functions that do not require a self param.
-BoundEventHandler = Callable[[tuple[CellState, ...]], None]
-
 
 class SimParams:
     """
@@ -111,6 +104,16 @@ class ModuleProtocol(ABC):
         del cell
 
 
+## @brief Generic TypeVar for classes implementing cell events.
+SelfT = TypeVar("SelfT", bound=ModuleProtocol)
+## @brief Type signature for functions that respond to cell events.
+# @param cells A tuple of cells involved in the event.
+EventHandler = Callable[[SelfT, tuple[CellState, ...]], None]
+## @brief Type signature for bound functions that do not require a self param.
+# @param cells A tuple of cells involved in the event.
+BoundEventHandler = Callable[[tuple[CellState, ...]], None]
+
+
 def cell_event(event: str, priority: int = 0) -> Callable[[EventHandler], EventHandler]:
     """
     @brief Function decorator for custom cell events.
@@ -169,7 +172,6 @@ class UserModule(ModuleProtocol):
         @brief Push optional user-defined values to Simulator.
         """
         params = SimParams()
-        params.verbosity = self.verbosity
         params.max_cells = self.max_cells
         params.max_contacts = self.max_contacts
         return params
