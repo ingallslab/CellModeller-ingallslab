@@ -6,12 +6,14 @@ Please move finished items to unreleased section of `CHANGELOG.md`
 
 ### Planned
 
- - [ ] Add new `CellModeller.Modules.ModuleProtocols`
-   - [ ] Support for custom cell events and flexible sim loop updates
  - [ ] Change `CellModeller.Simulator` implementation
    - [ ] Integrate with `ModuleProtocol` and `UserModule` classes
    - [ ] Check for custom cell events in update loop
    - [ ] Forward access layer for renderers to cell data
+ - [ ] Add new biophysics classes using `ModuleProtocol`
+   - [ ] Default bacterial model
+     - [ ] Document physics translated from original application
+   - [ ] Filamenting model demonstrating module flexibility
 
 ### Working On
 
@@ -29,11 +31,8 @@ Please move finished items to unreleased section of `CHANGELOG.md`
      - [x] Require a context manager to synchronize
    - [x] Conform to `collection.abc.Sequence` specification to access cells
    - [ ] Provide `memoryview`s to contiguous blocks of cell data for renderers
- - [x] Add OpenGL retained mode classes and shaders
-   - [x] Base wrapper class that handles shader compiling and memory management
-     - [ ] Default class for GUI background grid
-     - [ ] Default class for rod-shaped cells
-   - [x] Allow renderers to define cell attributes for intended cell types
+ - [x] Add new `CellModeller.Modules.ModuleProtocols`
+   - [ ] Support for custom cell events and flexible sim loop updates
 
 ### Done
 
@@ -60,6 +59,17 @@ Please move finished items to unreleased section of `CHANGELOG.md`
    - [x] Address underlying `numpy.ndarray` fields with object.attribute syntax
    - [x] Warn users about using undefined cell attributes
  - [x] Remove immediate mode renderers in `CellModeller/GUI/Renderers.py`
+ - [x] Add OpenGL retained mode classes and shaders
+   - [x] Base wrapper class that handles shader compiling and memory management
+     - [x] Default class for GUI background grid
+     - [x] Default class for rod-shaped cells
+   - [x] Allow renderers to define cell attributes for intended cell types
+ - [x] Remove deprecated and incompatible modules
+   - [x] All of `CellModeller.Biophysics`
+   - [x] All of `CellModeller.Integration`
+   - [x] All of `CellModeller.Regulation`
+   - [x] All of `CellModeller.Signalling`
+   - [x] Classes in `CellModeller.VTPWriter`
 
 ---
 
