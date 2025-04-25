@@ -5,7 +5,6 @@
 import importlib.resources
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Optional
 
 import numpy as np
 import OpenGL.GL as gl
@@ -162,7 +161,7 @@ class Renderer(ABC):
         proj: QMatrix4x4,
         view_inv: QMatrix4x4,
         proj_inv: QMatrix4x4,
-        vertex_count: Optional[int] = 0,
+        vertex_count: int = 0,
     ) -> None:
         """
         @brief Called by PyGLCMViewer once every render cycle.
@@ -183,8 +182,9 @@ class Renderer(ABC):
         self.shader_program.release()
 
     @abstractmethod
-    def draw(self, vertex_count: Optional[int]) -> None:
+    def draw(self, vertex_count: int) -> None:
         """
         @brief Main rendering logic goes here.
+        @param vertex_count Equal to last index in cell array.
         """
         ...

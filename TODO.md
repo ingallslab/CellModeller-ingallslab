@@ -54,6 +54,8 @@ Please move finished items to unreleased section of `CHANGELOG.md`
  - [x] Change `CellModeller.GUI.PyGLCMViewer` implementation
    - [x] Use retained mode instead of immediate mode for OpenGL rendering
    - [x] Improve performance by separating UI and sim in different threads
+     - [x] Simulator syncs with real time, processing speed permitting
+     - [x] Simulation speed independently controlled by `time_factor` variable
    - [x] Support for keyboard controls
  - [x] Change `CellModeller.CellState` implementation
    - [x] Address underlying `numpy.ndarray` fields with object.attribute syntax
@@ -64,12 +66,6 @@ Please move finished items to unreleased section of `CHANGELOG.md`
      - [x] Default class for GUI background grid
      - [x] Default class for rod-shaped cells
    - [x] Allow renderers to define cell attributes for intended cell types
- - [x] Remove deprecated and incompatible modules
-   - [x] All of `CellModeller.Biophysics`
-   - [x] All of `CellModeller.Integration`
-   - [x] All of `CellModeller.Regulation`
-   - [x] All of `CellModeller.Signalling`
-   - [x] Classes in `CellModeller.VTPWriter`
 
 ---
 

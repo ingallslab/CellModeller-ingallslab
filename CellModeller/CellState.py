@@ -153,7 +153,7 @@ class CellArrays(Sequence[CellState]):
             for mapping memory between host and compute layer. While inside of
             the context manager, behaves as a python sequence of cells, to
             allow indexed access of cells and iterating over all active cells.
-    @param verbosity Level of console printing. This class recognizes up to 3.
+    @param verbosity Level of console printing. This class recognizes up to 1.
     @param max_cells To allocate memory for.
     @param platform_id To initialize the OpenCL context.
     @param device_id see above.

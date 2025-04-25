@@ -81,7 +81,7 @@ class RodCells(Renderer):
 
         self.outline_loc = self.shader_program.uniformLocation("outline")
 
-    def draw(self, vertex_count) -> None:
+    def draw(self, vertex_count: int) -> None:
         if self.wireframe:
             gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
         else:
