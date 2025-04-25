@@ -14,11 +14,11 @@ class RodCells(Renderer):
     @brief Renderer handles OpenGL boilerplate except VBO management.
     @details Cell attributes defined by this class can be used by all other
             modules, these include:
-            - radius
-            - length
-            - pos
-            - dir
-            - color
+                - radius
+                - length
+                - pos
+                - dir
+                - color
     @param wireframe Whether or not to render in wireframe mode. (it looks cool)
     """
 

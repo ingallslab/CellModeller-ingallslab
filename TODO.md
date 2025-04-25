@@ -6,14 +6,18 @@ Please move finished items to unreleased section of `CHANGELOG.md`
 
 ### Planned
 
- - [ ] Change `CellModeller.Simulator` implementation
-   - [ ] Integrate with `ModuleProtocol` and `UserModule` classes
-   - [ ] Check for custom cell events in update loop
-   - [ ] Forward access layer for renderers to cell data
- - [ ] Add new biophysics classes using `ModuleProtocol`
-   - [ ] Default bacterial model
-     - [ ] Document physics translated from original application
-   - [ ] Filamenting model demonstrating module flexibility
+ - [ ] Improve `README.md` to reflect recent updates to application
+   - [ ] Include instructions for setup and installation
+   - [ ] Link to tutorial examples for writing a basic simulation
+   - [ ] How to generate documentation with Doxygen
+   - [ ] Brief overview of module structure and function
+     - [ ] Biophysics implementation
+ - [ ] Add `BoxContact` entity to mimic original plane contacts
+ - [ ] Add OpenGL renderer for filamenting cells
+ - [ ] Fix `CellArrays` slice implementation
+ - [ ] Add/port useful features from original application
+   - [ ] Saving to pickles/periodically writing simulation state
+   - [ ] Integration with PDESolver and visualize in ParaView
 
 ### Working On
 
@@ -21,18 +25,12 @@ Please move finished items to unreleased section of `CHANGELOG.md`
    - [x] Housekeeping guidelines
    - [x] Render pipeline overhaul
    - [x] New flexible module framework
-   - [ ] Filamenting support + module examples
-   - [ ] Starting points for full app migration
- - [ ] Remove save to pickles features while rewriting application
- - [ ] Add `CellArrays` class to manage cell data efficiently
-   - [ ] Define custom cell attributes using `numpy.dtype` declaration
-   - [x] Preallocate memory for known cell attributes
-   - [x] Manage centralized OpenCL shared memory between modules
-     - [x] Require a context manager to synchronize
-   - [x] Conform to `collection.abc.Sequence` specification to access cells
-   - [ ] Provide `memoryview`s to contiguous blocks of cell data for renderers
- - [x] Add new `CellModeller.Modules.ModuleProtocols`
-   - [ ] Support for custom cell events and flexible sim loop updates
+   - [x] Filamenting support + module examples
+   - [x] Starting points for full app migration
+ - [ ] Add new biophysics classes using `ModuleProtocol`
+   - [x] Default bacterial model
+     - [ ] Document physics translated from original application
+   - [ ] Filamenting model demonstrating module flexibility
 
 ### Done
 
@@ -57,6 +55,7 @@ Please move finished items to unreleased section of `CHANGELOG.md`
      - [x] Simulator syncs with real time, processing speed permitting
      - [x] Simulation speed independently controlled by `time_factor` variable
    - [x] Support for keyboard controls
+ - [x] Remove save to pickles features while rewriting application
  - [x] Change `CellModeller.CellState` implementation
    - [x] Address underlying `numpy.ndarray` fields with object.attribute syntax
    - [x] Warn users about using undefined cell attributes
@@ -66,6 +65,19 @@ Please move finished items to unreleased section of `CHANGELOG.md`
      - [x] Default class for GUI background grid
      - [x] Default class for rod-shaped cells
    - [x] Allow renderers to define cell attributes for intended cell types
+ - [x] Add `CellArrays` class to manage cell data efficiently
+   - [x] Define custom cell attributes using `numpy.dtype` declaration
+   - [x] Preallocate memory for known cell attributes
+   - [x] Manage centralized OpenCL shared memory between modules
+     - [x] Require a context manager to synchronize
+   - [x] Conform to `collection.abc.Sequence` specification to access cells
+   - [x] Provide `memoryview`s to contiguous blocks of cell data for renderers
+ - [x] Add new `CellModeller.Modules.ModuleProtocols`
+   - [x] Support for custom cell events and flexible sim loop updates
+ - [x] Change `CellModeller.Simulator` implementation
+   - [x] Integrate with `ModuleProtocol` and `UserModule` classes
+   - [x] Check for custom cell events in update loop
+   - [x] Forward access layer for renderers to cell data
 
 ---
 

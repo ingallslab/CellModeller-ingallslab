@@ -177,6 +177,7 @@ class PyGLCMViewer(QOpenGLWidget):
             "Grid": (self.grid, 1)
         }
         self.renderers: dict[str, tuple[Renderer, int]] = self.default_renderers
+        self.buffers_to_write: dict[str, list[WriteFunc]] = {}
 
         # init coordinate transformation matrices
         self._reset_view()
@@ -383,8 +384,16 @@ class PyGLCMViewer(QOpenGLWidget):
             max_cells = 1
 
         self.renderers = dict(sorted(self.renderers.items(), key=lambda x: x[1][1]))
+        self.buffers_to_write = {}
         for renderer, _ in self.renderers.values():
             renderer.initializeGL(max_cells)
+            write_funcs = renderer.set_buffers
+            if write_funcs is not None:
+                for field, func in write_funcs.items():
+                    if field in self.buffers_to_write:
+                        self.buffers_to_write[field] += [func]
+                    else:
+                        self.buffers_to_write[field] = [func]
 
     def resizeGL(self, w: int, h: int) -> None:
         """
@@ -406,18 +415,14 @@ class PyGLCMViewer(QOpenGLWidget):
         gl.glEnable(gl.GL_DEPTH_TEST)
 
         # send cell data to renderers that need it
-        buffers_to_write: dict[str, WriteFunc] = {}
         for renderer, _ in self.renderers.values():
             if self.sim is not None:
-                write_funcs = renderer.set_buffers
-                if write_funcs is not None:
-                    buffers_to_write |= write_funcs
                 renderer.paintGL(
                     self.projection,
                     self.view,
                     self.projection_inv,
                     self.view_inv,
-                    len(self.sim.cellStates),
+                    len(self.sim.cell_states),
                 )
             else:
                 renderer.paintGL(
@@ -425,7 +430,7 @@ class PyGLCMViewer(QOpenGLWidget):
                 )
 
         if self.sim is not None:
-            self.sim.write_to_buffer(buffers_to_write)
+            self.sim.write_to_buffer(self.buffers_to_write)
 
     ## @}
 
