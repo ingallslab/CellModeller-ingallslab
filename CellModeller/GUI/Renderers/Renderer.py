@@ -115,7 +115,7 @@ class Renderer(ABC):
         @brief Get VAO parameters from dtype.
         @param offset In bytes to start from.
         @param max_cells Required to match size of CellArrays array.
-        @returns Tuple of the new offset including the size of all added and
+        @return Tuple of the new offset including the size of all added and
                 dict mapping attribute names to tuples of glVertexAttribPointer
                 arugments, that is: type, offset, tupleSize, stride. Attrib
                 location determined in the subclass since attribs can only be
