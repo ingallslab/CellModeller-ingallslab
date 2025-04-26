@@ -32,7 +32,7 @@ class Contact(Protocol):
         ...
 
 
-class CellContact(Contact, Protocol):
+class CellContact(Contact):
     """
     @brief Extension of Contact for cell-cell events.
     @details Calling find_contact() evaluates the contact relative to the cell

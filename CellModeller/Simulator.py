@@ -21,6 +21,7 @@ from CellModeller.GUI.Renderers.Renderer import Renderer, WriteFunc
 from CellModeller.Modules.CMModule import (
     BoundEventHandler,
     CMModule,
+    SimParams,
     UserModule,
 )
 
@@ -152,16 +153,16 @@ class Simulator(CellManager[CellArrays]):
         clPlatformNum: int = 0,
         clDeviceNum: int = 0,
         verbosity: int = 0,
+        output_freq: int = 20,
         is_gui: bool = False,
         **_,
     ) -> None:
         self.clPlatformNum = clPlatformNum
         self.clDeviceNum = clDeviceNum
 
-        self.stepNum: int = 0
         self.paused: bool = False
         self.write_since_last_buffer_copy: bool = True
-        self.start_time: float = perf_counter()
+        self.step_times: list[float] = []
 
         self.load_user_module(moduleName, moduleStr)
         if not self.user_module.loaded_modules:
@@ -172,7 +173,8 @@ class Simulator(CellManager[CellArrays]):
             print("No cells added to initial distribution!")
         self.pickleSteps = self.user_module.pickle_steps
 
-        self.verbosity = max(verbosity, self.user_module.verbosity)
+        verbosity = max(verbosity, self.user_module.verbosity)
+        output_freq = min(output_freq, self.user_module.output_freq)
 
         # handle edge case of every cell dividing in a single timestep
         self.orig_max_cells = self.user_module.max_cells
@@ -224,24 +226,29 @@ class Simulator(CellManager[CellArrays]):
 
         # instantiate cell array to construct final dtype
         self.cell_states = CellArrays(
-            self.verbosity,
             self.user_module.max_cells,
             self.clPlatformNum,
             self.clDeviceNum,
             cell_attrs=cell_attrs,
         )
+        if verbosity > 1:
+            print("CellArrays underlying dtype", self.cell_states.dtype.descr)
 
         # set global params and pass to all modules
-        params = self.user_module.get_sim_attrs()
-        params.verbosity = self.verbosity
-        params.dtype = self.cell_states.dtype
-        params.using_svm = self.cell_states.using_svm
+        self.params = SimParams()
+        self.params.verbosity_level = (
+            lambda level: verbosity > level and self.params.sim_steps % output_freq == 0
+        )
+        self.params.max_cells = self.user_module.max_cells
+        self.params.max_contacts = self.user_module.max_contacts
+        self.params.dtype = self.cell_states.dtype
+        self.params.using_svm = self.cell_states.using_svm
         if self.cell_states.using_svm:
-            params.cl_context = self.cell_states.context
-            params.cl_queue = self.cell_states.queue
+            self.params.cl_context = self.cell_states.context
+            self.params.cl_queue = self.cell_states.queue
         # this also calls on_sim_ready for each module
         for module in self.user_module.loaded_modules:
-            module.set_sim_attrs(params, self.pause)
+            module.set_sim_attrs(self.params, self.pause)
 
         # add starting cells to simulation
         with self.cell_states:
@@ -267,7 +274,7 @@ class Simulator(CellManager[CellArrays]):
                 in the active UserModule, and finally in the UserModule itself.
         """
         dt = self.user_module.time_factor * dt
-        self.start_time = perf_counter()
+        self.step_times += [-perf_counter()]
 
         # OpenCL kernels if available
         if self.cell_states.using_svm:
@@ -301,10 +308,15 @@ class Simulator(CellManager[CellArrays]):
 
         self.cell_states.step(dt)
         self.write_since_last_buffer_copy = True
-        self.stepNum += 1
+        self.params.sim_steps += 1
 
-        if self.verbosity > 2:
-            print(f"sim step took {perf_counter() - self.start_time:.2f}s")
+        if self.params.verbosity_level(1):
+            print(self.cell_states.cell_count, "cells")
+
+        self.step_times[-1] += perf_counter()
+        if self.params.verbosity_level(2):
+            print(f"sim step took {np.mean(self.step_times):.2f}s (avg)")
+            self.step_times = []
 
     def write_to_buffer(self, buffers_to_write: dict[str, list[WriteFunc]]) -> None:
         """

@@ -6,12 +6,6 @@ Please move finished items to unreleased section of `CHANGELOG.md`
 
 ### Planned
 
- - [ ] Improve `README.md` to reflect recent updates to application
-   - [ ] Include instructions for setup and installation
-   - [ ] Link to tutorial examples for writing a basic simulation
-   - [ ] How to generate documentation with Doxygen
-   - [ ] Brief overview of module structure and function
-     - [ ] Biophysics implementation
  - [ ] Add `BoxContact` entity to mimic original plane contacts
  - [ ] Add OpenGL renderer for filamenting cells
  - [ ] Add tutorial examples that demonstrate use cases of new features
@@ -35,16 +29,16 @@ Please move finished items to unreleased section of `CHANGELOG.md`
 
 ### Working On
 
- - [ ] Add tasks to `TODO.md`
-   - [x] Housekeeping guidelines
-   - [x] Render pipeline overhaul
-   - [x] New flexible module framework
-   - [x] Filamenting support + module examples
-   - [x] Starting points for full app migration
- - [ ] Add new biophysics classes using `ModuleProtocol`
+ - [ ] Add new biophysics classes using `CMModule`
    - [x] Default bacterial model
      - [ ] Document physics translated from original application
    - [ ] Filamenting model demonstrating module flexibility
+ - [ ] Improve `README.md` to reflect recent updates to application
+   - [x] Include instructions for setup and installation
+   - [x] Link to tutorial examples for writing a basic simulation
+   - [x] How to generate documentation with Doxygen
+   - [x] Brief overview of module structure and function
+     - [ ] Biophysics implementation
 
 ### Done
 
@@ -86,10 +80,10 @@ Please move finished items to unreleased section of `CHANGELOG.md`
      - [x] Require a context manager to synchronize
    - [x] Conform to `collection.abc.Sequence` specification to access cells
    - [x] Provide `memoryview`s to contiguous blocks of cell data for renderers
- - [x] Add new `CellModeller.Modules.ModuleProtocols`
+ - [x] Add new `CellModeller.Modules.CMModule`
    - [x] Support for custom cell events and flexible sim loop updates
  - [x] Change `CellModeller.Simulator` implementation
-   - [x] Integrate with `ModuleProtocol` and `UserModule` classes
+   - [x] Integrate with `CMModule` and `UserModule` classes
    - [x] Check for custom cell events in update loop
    - [x] Forward access layer for renderers to cell data
 

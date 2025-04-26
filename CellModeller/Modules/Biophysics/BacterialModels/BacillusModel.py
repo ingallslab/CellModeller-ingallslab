@@ -102,6 +102,11 @@ class BacillusModel(CMModule):
         self.contact_count: int = 0
         self.cell_contact: type[CellContact] = BacillusContact
 
+        self.build_times: list[float] = []
+        self.solver_residuals: list[float] = []
+        self.A_condition: list[float] = []
+        self.solver_times: list[float] = []
+
     def on_sim_ready(self) -> None:
         """
         @brief Allocate memory for input and output vectors of lsmr solver.
@@ -133,12 +138,14 @@ class BacillusModel(CMModule):
         if count == 0:
             return
 
-        start = perf_counter()
+        self.build_times += [-perf_counter()]
         self.build_matrices(cell_states)
-        if self.sim_params.verbosity > 3:
-            print(f"buildmatrices took {perf_counter() - start:.2f}s")
+        self.build_times[-1] += perf_counter()
+        if self.sim_params.verbosity_level(3):
+            print(f"buildmatrices took {np.mean(self.build_times):.2f}s (avg)")
+            self.build_times = []
 
-        start = perf_counter()
+        self.solver_times += [-perf_counter()]
         if self.contact_count > 0:
             M = spa.coo_matrix(
                 (self.M_build[0], (self.M_build[1], self.M_build[2])),
@@ -154,17 +161,24 @@ class BacillusModel(CMModule):
 
             A = self.alpha * B.T @ B + M / dt
             b = -self.alpha * B.T @ d
-            if self.sim_params.verbosity > 4:
+            if self.sim_params.verbosity_level(4):
                 print(f"Sparsity of A: {100*(1-A.nnz/np.prod(A.shape)):.2f}%")
 
             res = lsmr(A, b, **self.solver_args)
             self.delta_p[: 7 * count] = res[0]
-            if self.sim_params.verbosity > 4:
-                print(f"Iterations: {res[2]}, Condition number of A: {res[6]}")
+            self.solver_residuals += [res[3]]
+            self.A_condition += [res[6]]
+            if self.sim_params.verbosity_level(4):
+                print(f"Iterations: {res[2]}")
+                print(f"Residual: {np.mean(self.solver_residuals)} (avg)")
+                print(f"Condition number of A: {np.mean(self.A_condition)} (avg)")
+                self.solver_residuals = []
+                self.A_condition = []
         else:
             self.delta_p[: 7 * count] = 0
-        if self.sim_params.verbosity > 3:
-            print(f"solving took {perf_counter() - start:.2f}s")
+        self.solver_times[-1] += perf_counter()
+        if self.sim_params.verbosity_level(3):
+            print(f"solving took {np.mean(self.solver_times):.2f}s (avg)")
 
         for state in cell_states:
             self.updateCell(state, dt)
@@ -231,7 +245,7 @@ class BacillusModel(CMModule):
         self.M_build[1] += [7 * i + 3 + a for a in [0, 0, 0, 1, 1, 1, 2, 2, 2]]
         self.M_build[2] += [7 * i + 3 + a for a in [0, 1, 2, 0, 1, 2, 0, 1, 2]]
 
-        if cell.growthRate > 0:
+        if cell.growth_rate > 0:
             self.M_build[0] += [self.gamma]
         else:
             self.M_build[0] += [0]
@@ -280,7 +294,7 @@ class BacillusModel(CMModule):
         cell.pos += d_pos
         cell.dir += d_dir
         cell.dir = cell.dir / np.linalg.norm(cell.dir)
-        growth = dt * cell.length * (cell.growthRate / 60)
+        growth = dt * cell.length * (cell.growth_rate / 60)
         if d_len > -growth:
             cell.length += d_len + growth
 
@@ -303,6 +317,7 @@ class BacillusModel(CMModule):
         cell.radius = 0.5
         cell.length = 3.0
         cell.dir = np.array((1, 0, 0))
+        cell.growth_rate = 0.05
         cell.ends = (
             cell.pos + 0.5 * cell.length * cell.dir,
             cell.pos - 0.5 * cell.length * cell.dir,
@@ -318,19 +333,20 @@ class BacillusModel(CMModule):
                 removal).
         @param cells tuple of (parent, daughter1, daughter2)
         """
-        parentState, *daughters = cells
+        parent, *daughters = cells
 
         for daughter, side in zip(daughters, [1, -1]):
+            daughter.radius = parent.radius
+            daughter.length = parent.length / 2.0 - parent.radius
             daughter.pos = (
-                parentState.pos
-                + (daughter.length / 2.0 + daughter.radius) * side * parentState.dir
+                parent.pos
+                + (daughter.length / 2.0 + daughter.radius) * side * parent.dir
             )
-            daughter.radius = parentState.radius
-            daughter.length = parentState.length / 2.0 - parentState.radius
             jitter = np.random.uniform(-self.jitter_magnitude, self.jitter_magnitude, 3)
             if not self.jitter_z:
                 jitter[2] = 0
-            daughter.dir = parentState.dir + jitter
+            daughter.dir = parent.dir + jitter
+            daughter.growth_rate = parent.growth_rate
             daughter.ends = (
                 daughter.pos + 0.5 * daughter.length * daughter.dir,
                 daughter.pos - 0.5 * daughter.length * daughter.dir,

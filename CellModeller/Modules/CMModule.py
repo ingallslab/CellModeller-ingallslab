@@ -24,8 +24,10 @@ class SimParams:
             a module may lead to undefined behaviour.
     """
 
-    ## @brief Simulation-wide level.
-    verbosity: int
+    ## @brief Whether or not to print to console.
+    verbosity_level: Callable[[int], bool]
+    ## @brief Number of sim steps = cell.time / (dt * time_factor)
+    sim_steps: int = 0
     ## @brief May differ from user-defined value.
     max_cells: int
     ## @brief Primarily for biophysics modules, does not affect mem alloc.
@@ -154,6 +156,8 @@ class UserModule(CMModule):
     pickle_steps: int = 50
     ## @brief Sets simulation level of console printing.
     verbosity: int = 0
+    ## @brief Sets simulation frequency of console printing.
+    output_freq: int = 20
     ## @brief Number of cells at which to pause simulation.
     # @details Also determines how much memory is allocated for cell attributes
     #       so setting it too high might result in an error!
@@ -166,12 +170,3 @@ class UserModule(CMModule):
     #       3 second real time => 20 minutes simulation => e. coli generation
     #       time at @ growth rate of 5%/min
     time_factor: float = 400
-
-    def get_sim_attrs(self) -> SimParams:
-        """
-        @brief Push optional user-defined values to Simulator.
-        """
-        params = SimParams()
-        params.max_cells = self.max_cells
-        params.max_contacts = self.max_contacts
-        return params

@@ -153,7 +153,6 @@ class CellArrays(Sequence[CellState]):
             for mapping memory between host and compute layer. While inside of
             the context manager, behaves as a python sequence of cells, to
             allow indexed access of cells and iterating over all active cells.
-    @param verbosity Level of console printing. This class recognizes up to 1.
     @param max_cells To allocate memory for.
     @param platform_id To initialize the OpenCL context.
     @param device_id see above.
@@ -195,15 +194,12 @@ class CellArrays(Sequence[CellState]):
 
     def __init__(
         self,
-        verbosity: int,
         max_cells: int,
         platform_id: int,
         device_id: int,
         cell_attrs: dict[str, np.dtype] = {},
         use_svm: bool = True,
     ) -> None:
-        self.verbosity = verbosity
-
         # global sim values passed to cellstates
         self.time = 0.0
         self.cell_count = 0
@@ -230,8 +226,6 @@ class CellArrays(Sequence[CellState]):
             offset += dtype.itemsize * max_cells
         # this will raise an error if attempt to define duplicate attribute names
         self.dtype = np.dtype(attrs_dtype)
-        if self.verbosity > 0:
-            print("CellArrays underlying dtype", self.dtype.descr)
 
         # create cellstate access class using dtype fields
         if self.dtype.names is not None:
