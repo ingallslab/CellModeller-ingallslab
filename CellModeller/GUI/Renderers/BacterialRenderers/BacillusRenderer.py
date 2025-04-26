@@ -4,7 +4,7 @@
 
 import numpy as np
 import OpenGL.GL as gl
-from PyQt5.QtGui import QOpenGLBuffer, QOpenGLVertexArrayObject
+from PyQt5.QtGui import QOpenGLBuffer
 
 from CellModeller.GUI.Renderers.Renderer import Renderer, WriteFunc
 
@@ -51,17 +51,13 @@ class BacillusRenderer(Renderer):
         self.block_start = max_cells
         size, buffer_attributes = self.get_buffer_attrs(self.block_start, max_cells)
         self.set_buffers = {
-            "RodCells": self.write_from(self.block_start),
+            "BacillusRenderer": self.write_from(self.block_start),
             "_active_flag": self.write_from(0),
         }
-
-        self.vertex_array = QOpenGLVertexArrayObject()
-        self.vertex_array.create()
 
         self.vertex_buffer = QOpenGLBuffer(QOpenGLBuffer.Type.VertexBuffer)
         self.vertex_buffer.create()
 
-        self.vertex_array.bind()
         self.vertex_buffer.bind()
         self.vertex_buffer.setUsagePattern(QOpenGLBuffer.UsagePattern.DynamicDraw)
         self.vertex_buffer.allocate(size)
@@ -77,7 +73,6 @@ class BacillusRenderer(Renderer):
             self.shader_program.setAttributeBuffer(loc, *attributes)
 
         self.vertex_buffer.release()
-        self.vertex_array.release()
 
         self.outline_loc = self.shader_program.uniformLocation("outline")
 

@@ -3,7 +3,7 @@
 """
 
 import OpenGL.GL as gl
-from PyQt5.QtGui import QOpenGLVertexArrayObject, QVector3D
+from PyQt5.QtGui import QVector3D
 
 from CellModeller.GUI.Renderers.Renderer import Renderer
 
@@ -26,8 +26,6 @@ class GridRenderer(Renderer):
 
     def init_renderer(self, max_cells: int) -> None:
         del max_cells
-        self.vertex_array = QOpenGLVertexArrayObject()
-        self.vertex_array.create()
 
     def draw(self, vertex_count: int) -> None:
         del vertex_count

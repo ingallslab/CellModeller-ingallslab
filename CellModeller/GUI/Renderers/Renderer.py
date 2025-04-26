@@ -69,7 +69,7 @@ class Renderer(ABC):
         self.shader_program = QOpenGLShaderProgram()
 
         name = self.__class__.__name__
-        module = self.__class__.__module__
+        module = self.__class__.__module__.rsplit(".", 1)[0]
 
         vert = name + ".vert"
         try:
@@ -143,24 +143,29 @@ class Renderer(ABC):
         @details Compiles shader and then calls init_renderer().
         """
         self.compile_shader()
+        self.vertex_array = QOpenGLVertexArrayObject()
+        self.vertex_array.create()
+
+        self.vertex_array.bind()
         self.init_renderer(max_cells)
+        self.vertex_array.release()
 
     @abstractmethod
     def init_renderer(self, max_cells: int) -> None:
         """
         @brief Called once the shader has been compiled.
         @details Must be implemented in subclasses and initializes additional
-                renderer parameters, creates VBOs, etc.
+                renderer parameters, creates VBOs, etc. VAO already bound.
         @param max_cells Passed on to get_buffer_attrs().
         """
         ...
 
     def paintGL(
         self,
-        view: QMatrix4x4,
         proj: QMatrix4x4,
-        view_inv: QMatrix4x4,
+        view: QMatrix4x4,
         proj_inv: QMatrix4x4,
+        view_inv: QMatrix4x4,
         vertex_count: int = 0,
     ) -> None:
         """

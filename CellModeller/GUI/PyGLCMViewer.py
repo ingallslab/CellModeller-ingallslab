@@ -86,7 +86,7 @@ class PyGLCMViewer(QOpenGLWidget):
     @brief GL widget for CellModeller GUI.
     """
 
-    def keybindings(self) -> None:
+    def set_keybindings(self) -> None:
         """
         @brief Default bindings for keyboard control.
         @details
@@ -151,9 +151,6 @@ class PyGLCMViewer(QOpenGLWidget):
         self.clPlatformNum = 0
         self.clDeviceNum = 0
 
-        # smooth keyboard movement
-        self.keys_pressed: dict[int, Callable[[float], None]] = dict()
-        self.last_time = time.time()
         # incremental update time (consumed by sim.step)
         self.delta = 0.0
         # average times for fps counter
@@ -181,6 +178,11 @@ class PyGLCMViewer(QOpenGLWidget):
 
         # init coordinate transformation matrices
         self._reset_view()
+
+        # smooth keyboard movement
+        self.keys_pressed: dict[int, Callable[[float], None]] = dict()
+        self.last_time = time.time()
+        self.set_keybindings()
 
     ## @name User interaction
     # Handle user inputs - keyboard and mouse.
