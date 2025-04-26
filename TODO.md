@@ -10,13 +10,15 @@ Please move finished items to unreleased section of `CHANGELOG.md`
  - [ ] Add OpenGL renderer for filamenting cells
  - [ ] Add tutorial examples that demonstrate use cases of new features
    - [ ] Moving planes?
-   - [ ] Come up with more ideas, ideally 2-3?
+   - [ ] Conjugation events?
+   - [ ] Diffusion-based toxins?
  - [ ] Investigate sources of **numerical instability** in biophysics solver...
  - [ ] Fix `CellArrays` slice implementation
  - [ ] Add/port useful features from original application
    - [ ] Saving to pickles/periodically writing simulation state
    - [ ] Right-click on a cell in GUI to display cell attributes
    - [ ] Integration with PDESolver and visualize in ParaView
+   - [ ] and... lots of other features that are definitely possible to migrate but will take time
  - [ ] Fix OpenCL kernels in contact finding
    - This is **not a trivial problem!!!**
    - Heavily platform-dependent optimizations required
@@ -37,55 +39,11 @@ Please move finished items to unreleased section of `CHANGELOG.md`
    - [x] Include instructions for setup and installation
    - [x] Link to tutorial examples for writing a basic simulation
    - [x] How to generate documentation with Doxygen
-   - [x] Brief overview of module structure and function
+   - [ ] Brief overview of module structure and function
      - [ ] Biophysics implementation
+   - [ ] Actually write something that isn't just AI boilerplate...
 
 ### Done
-
- - [x] Add new guidelines to `contributing.md`
-   - [x] Doxygen doctrings
-   - [x] Black code formatter
-   - [x] Conventional commits format
-   - [x] Semantic versioning usage
-   - [x] Up-to-date TODOs
-   - [x] Maintaining the changelog
- - [x] Migrate from `setup.py` to `pyproject.toml`
-   - [x] pre-commit hook for automatic code formatting with black
-   - [x] Raise Python requirement to 3.10+ for improved `typing` support
- - [x] Update DoxygenConfig to version 1.10.0
-   - [x] Include documentation from python docstrings
-   - [x] Hide undocumented members from output
- - [x] Refactor `Scripts/CellModellerGUI.py` to use `if __name__ == "__main__":`
- - [x] Remove `PyGLWidget` class
- - [x] Change `CellModeller.GUI.PyGLCMViewer` implementation
-   - [x] Use retained mode instead of immediate mode for OpenGL rendering
-   - [x] Improve performance by separating UI and sim in different threads
-     - [x] Simulator syncs with real time, processing speed permitting
-     - [x] Simulation speed independently controlled by `time_factor` variable
-   - [x] Support for keyboard controls
- - [x] Remove save to pickles features while rewriting application
- - [x] Change `CellModeller.CellState` implementation
-   - [x] Address underlying `numpy.ndarray` fields with object.attribute syntax
-   - [x] Warn users about using undefined cell attributes
- - [x] Remove immediate mode renderers in `CellModeller/GUI/Renderers.py`
- - [x] Add OpenGL retained mode classes and shaders
-   - [x] Base wrapper class that handles shader compiling and memory management
-     - [x] Default class for GUI background grid
-     - [x] Default class for rod-shaped cells
-   - [x] Allow renderers to define cell attributes for intended cell types
- - [x] Add `CellArrays` class to manage cell data efficiently
-   - [x] Define custom cell attributes using `numpy.dtype` declaration
-   - [x] Preallocate memory for known cell attributes
-   - [x] Manage centralized OpenCL shared memory between modules
-     - [x] Require a context manager to synchronize
-   - [x] Conform to `collection.abc.Sequence` specification to access cells
-   - [x] Provide `memoryview`s to contiguous blocks of cell data for renderers
- - [x] Add new `CellModeller.Modules.CMModule`
-   - [x] Support for custom cell events and flexible sim loop updates
- - [x] Change `CellModeller.Simulator` implementation
-   - [x] Integrate with `CMModule` and `UserModule` classes
-   - [x] Check for custom cell events in update loop
-   - [x] Forward access layer for renderers to cell data
 
 ---
 
