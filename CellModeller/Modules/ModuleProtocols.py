@@ -162,9 +162,9 @@ class UserModule(ModuleProtocol):
     max_contacts: int = 10000
     ## @brief Conversion of real time to simulation time.
     # @details Ex. The default value of 400 means that every 0.05 seconds of
-    #       real time increments 2 seconds of simulation time. In practice,
-    #       1 second real time => 40 seconds simulation => bacteria @ growth
-    #       rate of 5%/sec =~ 200% growth (not really but yeah).
+    #       real time increments 20 seconds of simulation time. In practice,
+    #       3 second real time => 20 minutes simulation => e. coli generation
+    #       time at @ growth rate of 5%/min
     time_factor: float = 400
 
     def get_sim_attrs(self) -> SimParams:

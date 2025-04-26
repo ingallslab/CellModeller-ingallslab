@@ -263,7 +263,8 @@ class Simulator(CellManager[CellArrays]):
         @brief Advance the simulation by dt seconds real time.
         @details This is the main event loop and also most time consuming part
                 of the simulation. Converts dt to simulation time before calling
-                sim_step functions in each module.
+                sim_step functions of each module in the order they are defined
+                in the active UserModule, and finally in the UserModule itself.
         """
         dt = self.user_module.time_factor * dt
         self.start_time = perf_counter()
