@@ -40,7 +40,7 @@ class SimParams:
     cl_queue: cl.CommandQueue | None = None
 
 
-class ModuleProtocol(ABC):
+class CMModule(ABC):
     """
     @brief Abstract base class for all CellModeller modules.
     @details Exposes methods to Simulator that initialize SimParams, step
@@ -105,7 +105,7 @@ class ModuleProtocol(ABC):
 
 
 ## @brief Generic TypeVar for classes implementing cell events.
-SelfT = TypeVar("SelfT", bound=ModuleProtocol)
+SelfT = TypeVar("SelfT", bound=CMModule)
 ## @brief Type signature for functions that respond to cell events.
 # @param cells A tuple of cells involved in the event.
 EventHandler = Callable[[SelfT, tuple[CellState, ...]], None]
@@ -133,7 +133,7 @@ def cell_event(event: str, priority: int = 0) -> Callable[[EventHandler], EventH
     return decorator
 
 
-class UserModule(ModuleProtocol):
+class UserModule(CMModule):
     """
     @brief Abstract base class for modules that configure simulations.
     @details These are the files users select to run simulations. Creates
@@ -149,7 +149,7 @@ class UserModule(ModuleProtocol):
     renderers: list[Renderer] = []
     ## @brief Modules.
     # @details Can technically include another UserModule too...
-    loaded_modules: list[ModuleProtocol] = []
+    loaded_modules: list[CMModule] = []
     ## @brief Not yet implemented but frequency of saving sim state.
     pickle_steps: int = 50
     ## @brief Sets simulation level of console printing.

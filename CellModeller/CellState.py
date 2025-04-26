@@ -47,7 +47,7 @@ class CellState:
         index: int,
         time: float,
         cell_count: int,
-    ):
+    ) -> None:
         self._array = array
         self._extra_array = extra_array
         self.index = index
@@ -201,7 +201,7 @@ class CellArrays(Sequence[CellState]):
         device_id: int,
         cell_attrs: dict[str, np.dtype] = {},
         use_svm: bool = True,
-    ):
+    ) -> None:
         self.verbosity = verbosity
 
         # global sim values passed to cellstates

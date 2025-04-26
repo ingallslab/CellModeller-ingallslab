@@ -36,7 +36,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from CellModeller.GUI.Renderers.BaseRenderers.Grid import Grid
+from CellModeller.GUI.Renderers.BaseRenderers.GridRenderer import GridRenderer
 from CellModeller.GUI.Renderers.Renderer import Renderer, WriteFunc
 from CellModeller.Simulator import ModuleTypeError, Simulator
 
@@ -133,7 +133,7 @@ class PyGLCMViewer(QOpenGLWidget):
             Qt.Key.Key_Shift: lambda _: None,
         }
 
-    def __init__(self, parent: QWidget | None = None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
         # Setup OpenGL context profile
@@ -172,7 +172,7 @@ class PyGLCMViewer(QOpenGLWidget):
 
         # include renderer priority
         # grid needs to be drawn last to avoid early discarding in depth test!
-        self.grid = Grid()
+        self.grid = GridRenderer()
         self.default_renderers: dict[str, tuple[Renderer, int]] = {
             "Grid": (self.grid, 1)
         }

@@ -18,9 +18,9 @@ import numpy as np
 
 from CellModeller.CellState import CellArrays, CellManager, CellState, StateSequence
 from CellModeller.GUI.Renderers.Renderer import Renderer, WriteFunc
-from CellModeller.Modules.ModuleProtocols import (
+from CellModeller.Modules.CMModule import (
     BoundEventHandler,
-    ModuleProtocol,
+    CMModule,
     UserModule,
 )
 
@@ -62,7 +62,7 @@ def pre_event(event_name: str) -> Callable[[PreEvent], PreEvent]:
             the last found instance of each is the only one that will be called.
             The search order is as follows:
                 - Simulator this class
-                - ModuleProtocol in order of loaded_modules
+                - CMModule in order of loaded_modules
                 - UserModule for this simulation
     """
     return event_decorator(event_name, "_pre_event")
@@ -154,7 +154,7 @@ class Simulator(CellManager[CellArrays]):
         verbosity: int = 0,
         is_gui: bool = False,
         **_,
-    ):
+    ) -> None:
         self.clPlatformNum = clPlatformNum
         self.clDeviceNum = clDeviceNum
 
@@ -191,8 +191,8 @@ class Simulator(CellManager[CellArrays]):
         # include usermodule last in list (for update loop as well!)
         self.user_module.loaded_modules += [self.user_module]
         for module in self.user_module.loaded_modules:
-            if not isinstance(module, ModuleProtocol):
-                raise RuntimeError(f"{module.__class__.__name__} is not ModuleProtocol")
+            if not isinstance(module, CMModule):
+                raise RuntimeError(f"{module.__class__.__name__} is not CMModule")
             if module.cell_attrs is not None:
                 cell_attrs |= {module.__class__.__name__: module.cell_attrs}
             # check for cell events in module methods

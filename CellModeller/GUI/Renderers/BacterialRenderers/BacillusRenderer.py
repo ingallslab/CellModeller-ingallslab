@@ -9,7 +9,7 @@ from PyQt5.QtGui import QOpenGLBuffer, QOpenGLVertexArrayObject
 from CellModeller.GUI.Renderers.Renderer import Renderer, WriteFunc
 
 
-class RodCells(Renderer):
+class BacillusRenderer(Renderer):
     """
     @brief Renderer handles OpenGL boilerplate except VBO management.
     @details Cell attributes defined by this class can be used by all other

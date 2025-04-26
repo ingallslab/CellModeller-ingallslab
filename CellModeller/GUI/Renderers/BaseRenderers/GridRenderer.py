@@ -8,7 +8,7 @@ from PyQt5.QtGui import QOpenGLVertexArrayObject, QVector3D
 from CellModeller.GUI.Renderers.Renderer import Renderer
 
 
-class Grid(Renderer):
+class GridRenderer(Renderer):
     """
     @brief Subclasses Renderer to handle OpenGL boilerplate.
     @details Parameters that can be configured within the class:
@@ -17,7 +17,7 @@ class Grid(Renderer):
             - linecolor of off-axis lines
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.uniforms: dict[str, int | QVector3D] = {
             "minTick": 5,
             "majTick": 20,
