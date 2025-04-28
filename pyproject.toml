@@ -25,6 +25,7 @@ dependencies = [
   "opencv-python",
   "scikit-image",
   "alphashape",
+  "siphash24",
 ]
 
 [project.optional-dependencies]
