@@ -67,9 +67,9 @@ class BacillusModel(CMModule):
         btol: float = 1e-6,
         maxiter: Optional[int] = None,
         conlim: Optional[float] = None,
-        muA: float = 1.0,
-        gamma: float = 1e6,
-        alpha: float = 1e4,
+        muA: float = 1e0,
+        gamma: float = 1e1,
+        alpha: float = 1e0,
         jitter_magnitude: float = 0.001,
     ) -> None:
         self.cell_attrs = np.dtype(
@@ -192,6 +192,9 @@ class BacillusModel(CMModule):
                 in its neighbourhood and calls compute_contact() on pairs,
                 finally check for contacts with non-cell simulation entities.
                 The latter two contact checks update B via build_B().
+        @note In order to avoid double-checking contacts, pairs are only checked
+                in order of cell index. If the contact is not symmetric, be sure
+                to handle either order in the compute_contact() implementation.
         """
         for cell in cell_states:
             self.build_M(cell)
@@ -284,6 +287,7 @@ class BacillusModel(CMModule):
     def updateCell(self, cell: CellState, dt: float) -> None:
         """
         @brief Perform cell growth and update ends.
+        @details Disallow negative growth (cells shrinking).
         """
         i = cell.index
 

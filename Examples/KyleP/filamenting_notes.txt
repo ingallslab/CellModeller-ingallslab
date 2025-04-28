@@ -1,0 +1,60 @@
+Filamenting Notes
+
+A bit of a ramble concerning some of the problems I encountered while
+reimplementing the core biophysics of CellModeller:
+
+This module is an attempt to add support for variable cell morphologies within
+the energy-minimization perspective of the original CellModeller application.
+Alternative approaches tend to use coupled spring-based ODE models, which are
+supposed to take longer to solve than least squares regression, but after
+completing my introductory course in computational differential equations I'm
+starting to think that is a better approach to this problem. I'm not even sure
+the original code actually used matrix multiplications in the implementation,
+and it was just a way of framing the problem... There has also been a lot of
+work done in GPU accelerated solving of differential equations massively in
+parallel. Ex:
+SciML Julia implementation: https://github.com/SciML/DiffEqGPU.jl
+Raymond J. Spiteri (USask): https://www.cs.usask.ca/~spiteri/M314/notes/parallelODEs.pdf
+
+With regards to the existing modelling approach, however, some considerations:
+First, make sure the you understand the contents of math.pdf, and are able to
+identify the steps as the occur in BacillusModel. Of note is the assumption
+that "viscous drag dominates inertia", which I missed for a long time and that
+made a lot of the math very confusing. However, in the course of checking all
+the equations for dimensional consistency I realized we need a better physical
+interpretation of the model parameters. There are 3 key parameters the matrix
+equations rely on: muA, gamma, and alpha. The documentation describes gamma as
+"resistance to change in length" and alpha as "relative energy cost ... due to
+deformation of cell wall", but I couldn't find dimensions for either.
+
+Because I didn't understand the use of momentum, I attempted to re-derive the
+equations based around change in position instead. It is unclear to me whether
+or not the original implementation in CLBacterium.cl finds position or momentum.
+
+We are dealing with an energy-minimization problem and alpha is multiplied by
+change in position^2 before being added to the work term, I figured it would
+make sense to have it be [M]/[T]^2 like a spring constant. On the other hand, it
+is mentioned that "growth velocity" is in [L]/[T], although I ended up rewriting
+it in [T]^-1 to better match the assumption of length-dependent growth rate.
+However, I couldn't find a way of defining internal growth pressure in terms of
+cell variables - it was always so weak that even two cells lined up end to end
+would just stop each other from growing entirely instead of pushing apart. gamma
+is a global parameter quantity in [M]/[T] and doesn't seem related to any sort
+of pressure, but it seems to be the only way of reasonably limiting cell growth.
+So it remains a question to me: what is a possible physical interpretation of
+this parameter that we could measure in experiment?
+
+When considering possible candidates I came up with cell elasticity and membrane
+surface tension. Neither of these options make sense in this context because
+they aren't driving cell growth. The alternative is that the cytoskeleton is
+responsible for "growth pressure". This is somewhat of a relief because the
+other options seem to invalidate our current model of filamenting cells and
+while segments might not be ideal it at least somewhat aligns with the idea of
+multinuclear filaments. This does make it harder to characterize though and I
+wonder if gamma can vary per cell, despite muA and alpha being global params.
+
+Testing different values for muA, gamma, and alpha reveals qualitatively
+different behaviour so it is definitely important to consider the effect of
+these parameters on experimental outcomes.
+
+Good luck to whoever takes up this project next!
