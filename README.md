@@ -17,14 +17,13 @@ signalling through customizable models written in Python.
 - [Features](#-features)
 - [Installation](#-installation)
 - [Running the GUI](#️-running-the-gui)
-- [Command-line Usage](#-running-models-from-cli)
 - [Writing Your Own Models](#-writing-your-own-models)
 - [Documentation](#-documentation)
+- [Troubleshooting](#-troubleshooting)
 - [Citation](#-citation)
 - [Contributing](#-contributing)
 - [License](#-license)
-- [Questions](#-questions)
-- [To-Do](#-todo--future-ideas-optional-section)
+- [To-Do](#-todo)
 
 ---
 
@@ -74,20 +73,18 @@ python CellModeller/Scripts/CellModellerGUI.py
 - **Save Pickle** – Toggle saving simulation data
 
 ### Keyboard Controls
-- Move: `WASD`
+- Move: `WASD`, `QE`, arrow keys
 - Rotate: `IJKL`, `UO`
 - Zoom: Scroll wheel
 - Mouse drag: look around
 - Right-click: move camera
 
----
-
-## 🧪 Running Models from CLI
+### Running Models from CLI
 
 You can also run models directly:
 
 ```bash
-python CellModeller/Scripts/CellModellerGUI.py Examples/KyleP/Tutorial_1a.py
+python Scripts/CellModellerGUI.py Examples/KyleP/Tutorial_1a.py
 ```
 
 ---
@@ -122,6 +119,37 @@ html/index.html
 
 ---
 
+## 🛠️ Troubleshooting
+
+<details>
+<summary>
+No UserModule found in ...
+</summary>
+Note that a lot of the old examples use deprecated parts of the application, so
+will not work until rewritten using the new API.
+
+If you are using the new API:
+1. Check if there is a subclass of UserModule in the given path.
+2. Check if it is a concrete implementation or an abstract class by
+instantiating it either at the top level of the file or in an interactive shell.
+> If not, remember to implement the abstract methods sim_step() and
+on_sim_ready(), even if they are empty functions!
+</details>
+
+<details>
+<summary>
+pyopencl has no attribute SVM
+</summary>
+This error has appeared on some Apple silicon Mac computers. Currently no
+workarounds exist, rollback to v4.3.1. We are working on a fix.
+</details>
+
+Think your problem runs deeper than that?
+Open an [issue](https://github.com/ingallslab/CellModeller-ingallslab/issues) on GitHub,
+mentioning what you've tried and what you expect to happen.
+
+---
+
 ## 📚 Citation
 
 If you use CellModeller in academic work, please cite:
@@ -138,13 +166,7 @@ Check out our [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 ---
 
-## 💬 Questions?
-
-Open an [issue](https://github.com/ingallslab/CellModeller-ingallslab/issues) on GitHub.
-
----
-
-## ✅ TODO / Future Ideas
+## ✅ TODO
 
 See [TODO.md](./TODO.md) for plans and upcoming improvements.
 Also check out the [CHANGELOG.md](./CHANGELOG.md) for recent updates.

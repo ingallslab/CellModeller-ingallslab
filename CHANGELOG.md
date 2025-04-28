@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [5.0.0a1] - 2025-04-25
 
+Major rewrite and breaking changes to API. Restructure application to make it
+more flexible and amenable to future development. Still in unstable alpha,
+as more features are added it might eventually make it to next major version.
+
+**NOTE:** Important refactoring changes that affect *users*
+ - Changed cell attributes to use Python convention snake case i.e. `divide_flag`
+ instead of `divideFlag`
+ - `cell.growth_rate` is now measured in %/min not %/second. See `time_factor`
+ documentation in `CellModeller.Modules.CMModule` for more details. Essentially,
+ a growth rate of 0.05 corresponds to a growth rate of 1 in the previous version.
+ - `cell.index` is not a unique identifier. It is guaranteed to be constant
+ through the duration of any individual cell's life, but new indices are not
+ assigned in a particular order. If a simulation requires unique ids assign in
+ new_cell() method.
+
 ### Added
 
  - New guidelines to `contributing.md`
@@ -22,8 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - OpenGL retained mode classes and shaders
    - Allow renderers to define cell attributes for intended cell types
    - Base wrapper class that handles shader compiling and memory management
-     - Default class for GUI background grid
-     - Default class for rod-shaped cells
+   - Default class for GUI background grid
+   - Default class for rod-shaped cells
  - New classes to manage cell data efficiently
    - Define custom cell attributes using `numpy.dtype` declaration
    - Preallocate memory for known cell attributes
@@ -73,9 +88,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### BREAKING CHANGES
 
- - All old scripts and modules that rely on
+ - All old scripts and modules that rely on:
    - Specific attributes of `Simulator.py`
    - The old fixed-type 4-module system
-   - Cells being stored as a list of Python objects
-     - Pickles
+   - Cells being stored as a list of Python objects (incl. pickles)
  - Everything else not tested or included as part of v5.0.0

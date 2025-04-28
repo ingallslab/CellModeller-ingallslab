@@ -7,12 +7,12 @@ Please move finished items to unreleased section of `CHANGELOG.md`
 ### Planned
 
  - [ ] Add `BoxContact` entity to mimic original plane contacts
- - [ ] Add OpenGL renderer for filamenting cells
  - [ ] Add tutorial examples that demonstrate use cases of new features
    - [ ] Moving planes?
    - [ ] Conjugation events?
    - [ ] Diffusion-based toxins?
  - [ ] Investigate sources of **numerical instability** in biophysics solver...
+   - [ ] Explore possible preconditioners for contact matrix
  - [ ] Fix `CellArrays` slice implementation
  - [ ] Add/port useful features from original application
    - [ ] Saving to pickles/periodically writing simulation state
@@ -31,17 +31,16 @@ Please move finished items to unreleased section of `CHANGELOG.md`
 
 ### Working On
 
- - [ ] Add new biophysics classes using `CMModule`
-   - [x] Default bacterial model
-     - [ ] Document physics translated from original application
-   - [ ] Filamenting model demonstrating module flexibility
+ - [x] Filamenting model demonstrating module flexibility
+   - [ ] Cell events for creation of new segments in filamenting cell
+   - [ ] Add OpenGL renderer for filamenting cells
  - [ ] Improve `README.md` to reflect recent updates to application
    - [x] Include instructions for setup and installation
    - [x] Link to tutorial examples for writing a basic simulation
    - [x] How to generate documentation with Doxygen
    - [ ] Brief overview of module structure and function
-     - [ ] Biophysics implementation
    - [ ] Actually write something that isn't just AI boilerplate...
+   - [ ] Throw in some pictures/screenshots!
 
 ### Done
 
