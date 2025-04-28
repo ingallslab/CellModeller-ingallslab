@@ -2,7 +2,7 @@
 
 [![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-green)](./licence.txt)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![Docs](https://img.shields.io/badge/docs-doxygen-lightgrey.svg)](#documentation)
+[![Docs](https://img.shields.io/badge/docs-doxygen-lightgrey.svg)](#-documentation)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](Community/code_of_conduct.md)
 
 **CellModeller** is a Python-based framework for modeling large-scale multicellular
@@ -16,13 +16,12 @@ signalling through customizable models written in Python.
 
 - [Features](#-features)
 - [Installation](#-installation)
-- [Running the GUI](#️-running-the-gui)
+- [Running the GUI](#-running-the-gui)
 - [Writing Your Own Models](#-writing-your-own-models)
 - [Documentation](#-documentation)
 - [Troubleshooting](#-troubleshooting)
 - [Citation](#-citation)
 - [Contributing](#-contributing)
-- [License](#-license)
 - [To-Do](#-todo)
 
 ---
@@ -57,7 +56,7 @@ pip install -e .
 
 ---
 
-## 🖥️ Running the GUI
+## 💻 Running the GUI
 
 Launch the GUI:
 
@@ -119,7 +118,7 @@ html/index.html
 
 ---
 
-## 🛠️ Troubleshooting
+## 🔧 Troubleshooting
 
 <details>
 <summary>
@@ -162,7 +161,7 @@ If you use CellModeller in academic work, please cite:
 ## 🤝 Contributing
 
 We welcome contributions of all kinds!
-Check out our [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+Check out our [CONTRIBUTING.md](./Community/contributing.md) for guidelines.
 
 ---
 

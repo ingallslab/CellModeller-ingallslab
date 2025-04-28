@@ -168,6 +168,7 @@ Thanks again for helping improve CellModeller![^2]
     refactor| Not a feature or a fix, retains logic
     style   | Does not change meaning of code
     test    | Only affects tests
+
     If a commit falls under multiple categories, it can most likely be split
     into several smaller commits. If not, pick the most appropriate.
 
