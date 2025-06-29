@@ -346,7 +346,7 @@ def annotate_parent_daughter_relationship(df):
 
 
 def process_simulation_directory(input_directory, cell_type_mapping, output_directory, assign_cell_type=True,
-                                 use_grandmother_as_parent=False):
+                                 use_grandmother_as_parent=False, find_neighbors=True):
     """
     Processes a directory of CellModeller pickle files to extract cell features and track relationships.
 
@@ -359,6 +359,12 @@ def process_simulation_directory(input_directory, cell_type_mapping, output_dire
         If True, approximates the parent bacterium by selecting the nearest disappeared bacterium
         from the previous time step. Useful when large time step gaps cause the actual parent
         to no longer appear in the previous step.
+    - find_neighbors (bool):
+        If True, computes neighbor relationships between bacteria based on spatial proximity.
+        Specifically, it defines two bacteria as neighbors if their expanded pixel boundaries
+        touch — consistent with CellProfiler's "MeasureObjectNeighbors" module.
+        Note: Even if this parameter is set to False, neighbor relationships will still be computed
+        if the original pickle files do not already include neighbor data.
 
     Returns:
     - None. Writes two CSV files to the output directory:
@@ -439,7 +445,7 @@ def process_simulation_directory(input_directory, cell_type_mapping, output_dire
     df.to_csv(output_directory + "/Objects properties.csv", index=False)
 
     # now we should check dataframes
-    if len(rows_neighbors) == 0:
+    if len(rows_neighbors) == 0 or find_neighbors:
         # This means that the neighbors were not found in the CellModeler
         print('Finding Neighbors')
         df_neighbors = neighbor_finders(input_directory)
