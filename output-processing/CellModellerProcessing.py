@@ -441,6 +441,19 @@ def process_simulation_directory(input_directory, cell_type_mapping, output_dire
     df['LifeHistory'] = df.groupby('id')['id'].transform('size')
     df = annotate_parent_daughter_relationship(df)
 
+    # now check negative values
+    x_axis_cols = ['Node_x1_x', 'Node_x2_x', 'Location_Center_X', 'AreaShape_Center_X']
+    y_axis_cols = ['Node_x1_y', 'Node_x2_y', 'Location_Center_Y', 'AreaShape_Center_Y']
+
+    x_min_val = np.min(df[x_axis_cols].to_numpy().flatten())
+    y_min_val = np.min(df[y_axis_cols].to_numpy().flatten())
+
+    if x_min_val < 0:
+        df[x_axis_cols] += np.abs(x_min_val) + 1
+
+    if y_min_val < 0:
+        df[y_axis_cols] += np.abs(y_min_val) + 1
+
     # write to csv
     df.to_csv(output_directory + "/Objects properties.csv", index=False)
 
