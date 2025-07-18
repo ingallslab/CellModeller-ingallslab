@@ -372,6 +372,8 @@ def process_simulation_directory(input_directory, cell_type_mapping, output_dire
         - 'Object relationships.csv' containing neighbor relationships.
     """
 
+    epsilon = 0.00005
+
     # firstly I create a dictionary and append extracted features to corresponding key list
     dataframe = {'id': [], 'ImageNumber': [], 'ObjectNumber': [], 'Type': [], 'AreaShape_Area': [],
                  'AreaShape_Center_X': [], 'AreaShape_Center_Y': [], 'AreaShape_MajorAxisLength': [],
@@ -453,6 +455,10 @@ def process_simulation_directory(input_directory, cell_type_mapping, output_dire
 
     if y_min_val < 0:
         df[y_axis_cols] += np.abs(y_min_val) + 1
+
+    # major axis length
+    df.loc[df['AreaShape_MajorAxisLength'] <= 0, 'AreaShape_MajorAxisLength'] = epsilon
+    df.loc[df['AreaShape_MinorAxisLength'] <= 0, 'AreaShape_MinorAxisLength'] = epsilon / 2
 
     # write to csv
     df.to_csv(output_directory + "/Objects properties.csv", index=False)
