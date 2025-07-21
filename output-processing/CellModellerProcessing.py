@@ -222,7 +222,9 @@ def extract_bacterial_features(current_time_step_num, current_time_step_bac, pre
     bac_features_dict['AreaShape_Center_Y'].extend([cs[it].pos[1] for it in bac_it])
     bac_features_dict['AreaShape_MajorAxisLength'].extend([cs[it].length for it in bac_it])
     bac_features_dict['AreaShape_MinorAxisLength'].extend([cs[it].radius for it in bac_it])
+
     bac_features_dict['AreaShape_Orientation'].extend([np.arctan2(cs[it].dir[1], cs[it].dir[0]) for it in bac_it])
+
     bac_features_dict['Node_x1_x'].extend([cs[it].ends[0][0] for it in bac_it])
     bac_features_dict['Node_x1_y'].extend([cs[it].ends[0][1] for it in bac_it])
     bac_features_dict['Node_x2_x'].extend([cs[it].ends[1][0] for it in bac_it])
@@ -345,6 +347,73 @@ def annotate_parent_daughter_relationship(df):
     return df
 
 
+def propagate_bacteria_labels(df, parent_image_number_col, parent_object_number_col, label_col):
+    """
+    Assign or propagate labels for bacteria based on parent-child relationships.
+
+    This function assigns unique labels to bacteria and propagates them across frames based on
+    parent-child relationships in tracking data. It ensures consistent labeling of bacteria
+    across multiple time steps by leveraging parent image and object identifiers.
+
+    :param pd.DataFrame df:
+        Input dataframe containing bacterial tracking data, including parent-child relationships.
+    :param str parent_image_number_col:
+        Name of the column representing the parent image number.
+    :param str parent_object_number_col:
+        Name of the column representing the parent object number.
+    :param str label_col:
+        Name of the column to assign or propagate labels.
+
+    :return:
+        pd.DataFrame
+
+        Updated dataframe with assigned or propagated labels in the specified column.
+        Also adds a `checked` column to indicate whether a row has been processed.
+    """
+
+    df['checked'] = False
+    df[label_col] = np.nan
+    cond1 = df[parent_image_number_col] == 0
+
+    df.loc[cond1, label_col] = df.loc[cond1, 'index'].values + 1
+    df.loc[cond1, 'checked'] = True
+
+    # other bacteria
+    other_bac_df = df.loc[~ df['checked']]
+
+    temp_df = df.copy()
+    temp_df.index = (temp_df['ImageNumber'].astype(str) + '_' + temp_df['ObjectNumber'].astype(str))
+
+    bac_index_dict = temp_df['index'].to_dict()
+
+    label_list = []
+
+    same_bac_dict = {}
+
+    for row_index, row in other_bac_df.iterrows():
+
+        image_number, object_number, parent_img_num, parent_obj_num = \
+            row[['ImageNumber', 'ObjectNumber', parent_image_number_col, parent_object_number_col]]
+
+        if f'{int(parent_img_num)}_{int(parent_obj_num)}' not in same_bac_dict.keys():
+            source_link = df.iloc[bac_index_dict[f'{int(parent_img_num)}_{int(parent_obj_num)}']]
+
+            this_bac_label = source_link[label_col]
+
+        else:
+
+            this_bac_label = same_bac_dict[f'{int(parent_img_num)}_{int(parent_obj_num)}']
+
+        label_list.append(this_bac_label)
+
+        # same bacteria
+        same_bac_dict[f'{int(image_number)}_{int(object_number)}'] = this_bac_label
+
+    df.loc[other_bac_df.index, label_col] = label_list
+
+    return df
+
+
 def process_simulation_directory(input_directory, cell_type_mapping, output_directory, assign_cell_type=True,
                                  use_grandmother_as_parent=False, find_neighbors=True):
     """
@@ -372,7 +441,7 @@ def process_simulation_directory(input_directory, cell_type_mapping, output_dire
         - 'Object relationships.csv' containing neighbor relationships.
     """
 
-    epsilon = 0.00005
+    epsilon = 0.005
 
     # firstly I create a dictionary and append extracted features to corresponding key list
     dataframe = {'id': [], 'ImageNumber': [], 'ObjectNumber': [], 'Type': [], 'AreaShape_Area': [],
@@ -431,6 +500,8 @@ def process_simulation_directory(input_directory, cell_type_mapping, output_dire
                        'Node_x1_y': dataframe['Node_x1_y'], 'Node_x2_x': dataframe['Node_x2_x'],
                        'Node_x2_y': dataframe['Node_x2_y']})
 
+    df['LifeHistory'] = df.groupby('id')['id'].transform('size')
+
     if assign_cell_type:
         cell_type_names = cell_type_mapping.keys()
         for cnt, CellType in enumerate(cell_type_names):
@@ -439,9 +510,6 @@ def process_simulation_directory(input_directory, cell_type_mapping, output_dire
         df['cellType'] = df[cell_type_names].idxmax(axis=1)
         df.loc[df[cell_type_names].max(axis=1) == 0, 'cellType'] = 0
         df.loc[(df[cell_type_names] == 1).sum(axis=1) > 1, 'cellType'] = 3
-
-    df['LifeHistory'] = df.groupby('id')['id'].transform('size')
-    df = annotate_parent_daughter_relationship(df)
 
     # now check negative values
     x_axis_cols = ['Node_x1_x', 'Node_x2_x', 'Location_Center_X', 'AreaShape_Center_X']
@@ -457,8 +525,82 @@ def process_simulation_directory(input_directory, cell_type_mapping, output_dire
         df[y_axis_cols] += np.abs(y_min_val) + 1
 
     # major axis length
-    df.loc[df['AreaShape_MajorAxisLength'] <= 0, 'AreaShape_MajorAxisLength'] = epsilon
-    df.loc[df['AreaShape_MinorAxisLength'] <= 0, 'AreaShape_MinorAxisLength'] = epsilon / 2
+    # df.loc[df['AreaShape_MajorAxisLength'] <= 0, 'AreaShape_MajorAxisLength'] = epsilon
+    # df.loc[df['AreaShape_MinorAxisLength'] <= 0, 'AreaShape_MinorAxisLength'] = epsilon / 2
+
+    neg_bac = df.loc[df['AreaShape_MajorAxisLength'] <= 0]
+    id_for_update_age_list = []
+
+    bac_id_should_remove_index = []
+    for neg_bac_id in neg_bac['id'].unique():
+        sel_bac = df.loc[df['id'] == neg_bac_id]
+        if sel_bac['LifeHistory'].values[0] > 1:
+            pos_len_bac = sel_bac.loc[sel_bac['AreaShape_MajorAxisLength'] > 0]
+            neg_len_bac = sel_bac.loc[sel_bac['AreaShape_MajorAxisLength'] <= 0]
+
+            pos_len_age = pos_len_bac['CellAge'].values
+            neg_len_age = neg_len_bac['CellAge'].values
+
+            if np.all(neg_len_age > pos_len_age[:, None]):
+                bac_id_should_remove_index.extend(neg_len_bac.index.values.tolist())
+
+                next_bac = df.loc[
+                    (df['TrackObjects_ParentImageNumber_50'] == neg_len_bac['ImageNumber'].values[-1]) &
+                    (df['TrackObjects_ParentObjectNumber_50'] == neg_len_bac['ObjectNumber'].values[-1])]
+
+                if next_bac.shape[0] > 0:
+                    df.at[next_bac.index.values[0], 'TrackObjects_ParentImageNumber_50'] = 0
+                    df.at[next_bac.index.values[0], 'TrackObjects_ParentObjectNumber_50'] = 0
+
+            elif np.all(neg_len_age < pos_len_age[:, None]):
+                bac_id_should_remove_index.extend(neg_len_bac.index.values.tolist())
+                id_for_update_age_list.append(neg_bac_id)
+
+                next_bac = df.loc[
+                    (df['TrackObjects_ParentImageNumber_50'] == neg_len_bac['ImageNumber'].values[-1]) &
+                    (df['TrackObjects_ParentObjectNumber_50'] == neg_len_bac['ObjectNumber'].values[-1])]
+
+                if next_bac.shape[0] > 0:
+                    df.at[next_bac.index.values[0], 'TrackObjects_ParentImageNumber_50'] = 0
+                    df.at[next_bac.index.values[0], 'TrackObjects_ParentObjectNumber_50'] = 0
+
+            else:
+                bac_id_should_remove_index.extend(pos_len_bac.index.values.tolist())
+                bac_id_should_remove_index.extend(neg_len_bac.index.values.tolist())
+
+                next_bac = df.loc[
+                    (df['TrackObjects_ParentImageNumber_50'] == sel_bac['ImageNumber'].values[-1]) &
+                    (df['TrackObjects_ParentObjectNumber_50'] == sel_bac['ObjectNumber'].values[-1])]
+
+                if next_bac.shape[0] > 0:
+                    df.at[next_bac.index.values[0], 'TrackObjects_ParentImageNumber_50'] = 0
+                    df.at[next_bac.index.values[0], 'TrackObjects_ParentObjectNumber_50'] = 0
+        else:
+            bac_id_should_remove_index.extend(sel_bac.index.values.tolist())
+
+            next_bac = df.loc[
+                (df['TrackObjects_ParentImageNumber_50'] == sel_bac['ImageNumber'].values[-1]) &
+                (df['TrackObjects_ParentObjectNumber_50'] == sel_bac['ObjectNumber'].values[-1])]
+
+            if next_bac.shape[0] > 0:
+                df.at[next_bac.index.values[0], 'TrackObjects_ParentImageNumber_50'] = 0
+                df.at[next_bac.index.values[0], 'TrackObjects_ParentObjectNumber_50'] = 0
+
+    df = df.drop(bac_id_should_remove_index).reset_index(drop=True)
+
+    mask_bac = df['id'].isin(id_for_update_age_list)
+    df.loc[mask_bac, 'CellAge'] = df[mask_bac].groupby('id').cumcount() + 1
+
+    df['LifeHistory'] = df.groupby('id')['id'].transform('size')
+
+    df['index'] = df.index.values
+    df = propagate_bacteria_labels(df, 'TrackObjects_ParentImageNumber_50',
+                                   'TrackObjects_ParentObjectNumber_50',
+                                   "TrackObjects_Label_50")
+    df = df.drop('index', axis=1)
+    df = df.drop('checked', axis=1)
+
+    df = annotate_parent_daughter_relationship(df)
 
     # write to csv
     df.to_csv(output_directory + "/Objects properties.csv", index=False)
