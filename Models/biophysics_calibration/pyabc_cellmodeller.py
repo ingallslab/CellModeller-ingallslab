@@ -175,6 +175,10 @@ if __name__ == '__main__':
     exp_summary_stats["Density"] = 0.953001564059211
     exp_summary_stats["growth_rate_exp_deviation"] = 0.985259710208264
     exp_summary_stats["fourier_descriptor"] = 0.0206358837797498
+    exp_summary_stats['convexity'] = 0.1
+    exp_summary_stats['cell_orientaion_on_boundary'] = 0.1
+    exp_summary_stats['AgeDistanceDistribution'] = 0.1
+    exp_summary_stats['dyadStructure'] = 0.1
 
     # Define prior distribution for each parameter [lb, ub]
     param_config = {'gamma': [10, 1000], 'reg_param': [1/1000, 1/10]}
