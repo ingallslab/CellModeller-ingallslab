@@ -29,7 +29,7 @@ import pyabc
 from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.AspectRatio import calc_aspect_ratio
 from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.Anisotropy import get_global_order_parameter
 from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.density_calculation import get_density_parameter
-from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.growth_rate_exp_deviation import get_exp_deviation
+from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.growth_rate_exp_deviation import get_exp_deviation, get_norm_growth_rate
 from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.CellOrientationOnBoundary import calc_cell_orientation_on_boundary
 from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.AgeDistanceDistribution import calcAgeDistanceDistribution
 from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.dyadStructure import calcDyadStructure
@@ -74,15 +74,12 @@ def model(parameters):
     
     # Calculate summary statistics
     summary_stats = {}
-    summary_stats["Aspect Ratio"] = calc_aspect_ratio(cells)
-    summary_stats["Anisotropy"] = get_global_order_parameter(cells)
+    summary_stats["Aspect ratio"] = calc_aspect_ratio(cells)
+    summary_stats['Convexity'] = cal_convexity(cells)
+    summary_stats["Order parameter"] = get_global_order_parameter(cells)
     summary_stats["Density"] = get_density_parameter(cells)
-    summary_stats["growth_rate_exp_deviation"] = get_exp_deviation(export_path, dt)
-    summary_stats['convexity'] = cal_convexity(cells)
-    summary_stats["fourier_descriptor"] = calc_fourier_descriptor(cells)
-    summary_stats['cell_orientaion_on_boundary'] = calc_cell_orientation_on_boundary(cells)
-    summary_stats['AgeDistanceDistribution'] = calcAgeDistanceDistribution(cells)
-    summary_stats['dyadStructure'] = calcDyadStructure(cells)
+    summary_stats["Agreement with exponential growth"] = get_exp_deviation(export_path, dt)
+    summary_stats["Normalized growth rate"] = get_norm_growth_rate(export_path, dt, n_max=225, t_min=72*3/60)
 
 
     # Write summary stats to file for convenience (optional) 
@@ -170,15 +167,12 @@ if __name__ == '__main__':
 
     # Define experimental data
     exp_summary_stats = {}
-    exp_summary_stats["Aspect Ratio"] = 0.706879319359634
-    exp_summary_stats["Anisotropy"] = 0.75535426433106
+    exp_summary_stats["Aspect ratio"] = 0.706879319359634
+    exp_summary_stats['Convexity'] = 0.1
+    exp_summary_stats["Order parameter"] = 0.75535426433106
     exp_summary_stats["Density"] = 0.953001564059211
-    exp_summary_stats["growth_rate_exp_deviation"] = 0.985259710208264
-    exp_summary_stats["fourier_descriptor"] = 0.0206358837797498
-    exp_summary_stats['convexity'] = 0.1
-    exp_summary_stats['cell_orientaion_on_boundary'] = 0.1
-    exp_summary_stats['AgeDistanceDistribution'] = 0.1
-    exp_summary_stats['dyadStructure'] = 0.1
+    exp_summary_stats["Agreement with exponential growth"] = 0.985259710208264
+    exp_summary_stats["Normalized growth rate"] = 0.7
 
     # Define prior distribution for each parameter [lb, ub]
     param_config = {'gamma': [10, 1000], 'reg_param': [1/1000, 1/10]}
