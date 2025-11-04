@@ -19,7 +19,6 @@ The main summary statistic is calculated in get_exp_deviation.
 def get_exp_deviation(file_dir_path, dt):
     """
     Summary metric for deviation from an exponential fit.
-    Larger standard deviations indicate deviation from exponential growth.
     @param  file_dir_path   string containing path to directory containing .pickle files
     @param  dt              time step
     @return r_squared       correlation coefficient (R**2 value) of regression to ln(population_curve) vs. time
@@ -31,6 +30,26 @@ def get_exp_deviation(file_dir_path, dt):
     slope, intercept, r_squared = perform_linear_regression(x, y)
     
     return r_squared
+    
+def get_norm_growth_rate(file_dir_path, dt, n_max=225, t_min=72*3/60):
+    """
+    Growth rate (h-1) normalized to the maximum possible experimental growth rate
+    @param  file_dir_path   string containing path to directory containing .pickle files
+    @param  dt              time step
+    @param  n_max           Max cells observed in experiment
+    @param  dt              time step
+    @return r_squared       correlation coefficient (R**2 value) of regression to ln(population_curve) vs. time
+    """
+    time_list, population_list = get_population_curve(file_dir_path, dt)
+    
+    x = np.array(time_list)
+    y = np.log(np.array(population_list))
+    slope, intercept, r_squared = perform_linear_regression(x, y)
+    
+    max_growth_rate = np.log(n_max)/t_min
+    norm_growth_rate = slope/max_growth_rate
+    
+    return norm_growth_rate    
 
 def get_population_curve(file_dir_path, dt):
     """
@@ -85,14 +104,6 @@ def perform_linear_regression(x, y):
 """
 For plotting purposes only
 """
-def get_growth_rate(t, y):
-    """
-    Fit exponential function to data
-    """
-    opt_parms, parm_cov = curve_fit(exp_func, t, y, maxfev=10000)
-    K = opt_parms[0]
-    
-    return K
 
 def plot_population_curve(time_list, population_list):
     """
