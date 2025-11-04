@@ -1,0 +1,12 @@
+round 5 calibration:
+Mean gamma: 92.53944128461148
+std gamma: 3.0936534007449206
+Mean alpha: 3.702399344330892
+std alpha: 1.3532638315251675
+
+round 6 calibration:
+Mean gamma: 127.60443387234065
+std gamma: 3.0015099283276245
+Mean alpha: 3.546212151387164
+std alpha: 1.2553174729781076
+
