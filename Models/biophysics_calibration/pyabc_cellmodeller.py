@@ -35,11 +35,10 @@ from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.AgeDistanceDistributio
 from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.dyadStructure import calcDyadStructure
 from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.fourier_descriptor import calc_fourier_descriptor
 from Scripts.run_ss_on_exp_sim.scripts.summary_statistics.convexity_smart import cal_convexity
-
 from Scripts.run_ss_on_exp_sim.scripts.helper_functions import helperFunctions 
 
 cellmodeller_module = "simulation_module.py"  
-
+np.seterr(all="ignore") #suppress warnings for cleaner output
 
 def model(parameters):
     """
@@ -80,9 +79,9 @@ def model(parameters):
     summary_stats["growth_rate_exp_deviation"] = get_exp_deviation(export_path, dt)
     summary_stats['convexity'] = cal_convexity(cells)
     summary_stats["fourier_descriptor"] = calc_fourier_descriptor(cells)
-    summary_stats['cell_orientaion_on_boundary'] = calc_cell_orientation_on_boundary(cells)
-    summary_stats['AgeDistanceDistribution'] = calcAgeDistanceDistribution(cells)
-    summary_stats['dyadStructure'] = calcDyadStructure(cells)
+    #summary_stats['cell_orientaion_on_boundary'] = calc_cell_orientation_on_boundary(cells)
+    #summary_stats['AgeDistanceDistribution'] = calcAgeDistanceDistribution(cells)
+    #summary_stats['dyadStructure'] = calcDyadStructure(cells)
 
 
     # Write summary stats to file for convenience (optional) 
@@ -164,9 +163,9 @@ if __name__ == '__main__':
 
     # Define ABC-SMC settings
     n_cores = 8
-    population_size = 10 #40 # Number of simulations we need to accept to complete one calibration round
+    population_size = 40 # Number of simulations we need to accept to complete one calibration round
     min_epsilon = 0.05  # Stop if epsilon becomes smaller than this  
-    max_populations = 1 #5 #  Number of calibration rounds(stages)
+    max_populations = 5 #5 #  Number of calibration rounds(stages)
 
     # Define experimental data
     exp_summary_stats = {}
@@ -175,6 +174,7 @@ if __name__ == '__main__':
     exp_summary_stats["Density"] = 0.953001564059211
     exp_summary_stats["growth_rate_exp_deviation"] = 0.985259710208264
     exp_summary_stats["fourier_descriptor"] = 0.0206358837797498
+    exp_summary_stats['convexity'] = 0.6 # 0.6 is made up for now.
 
     # Define prior distribution for each parameter [lb, ub]
     param_config = {'gamma': [10, 1000], 'reg_param': [1/1000, 1/10]}
