@@ -116,14 +116,11 @@ def calc_fourier_descriptor(bacteria, fig_export_path, fig_name, shape, margin):
     @return fourier transform
     """
 
-    filled_contours = image_processing.fill_contours(bacteria, um_pixel_ratio=0.144, shape=shape, margin=margin)
-    # save image
-    if fig_export_path:
-        image_processing.save_fig(filled_contours, fig_export_path, fig_name)
-    # external image
-    boundary = image_processing.find_external_contours(filled_contours, fig_export_path, fig_name + '_boundary')
-    # convert pixel to coordinate
-    x_coordinates, y_coordinates = image_processing.pixel_to_coordinate(boundary)
+    boundary_points = image_processing.fill_contours(bacteria, um_pixel_ratio=0.144, shape=shape, margin=margin,
+                                                     fig_export_path=fig_export_path, fig_name=fig_name)
+
+    x_coordinates, y_coordinates = zip(*boundary_points)
+
     # center position
     x_center, y_center = center_coordinate(x_coordinates, y_coordinates)
     if fig_export_path:
@@ -136,4 +133,4 @@ def calc_fourier_descriptor(bacteria, fig_export_path, fig_name, shape, margin):
     normalized_radial_distance = calc_normalized_radial_distance(radial_distance)
 
     return discrete_fourier_transform(normalized_radial_distance)
-
+    

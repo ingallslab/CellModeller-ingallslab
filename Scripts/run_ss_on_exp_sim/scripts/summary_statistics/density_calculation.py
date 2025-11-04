@@ -195,7 +195,7 @@ def calculate_colony_density(img, fig_export_path=''):
     cell_area = np.count_nonzero(np.array(img) == 255)
 
     # Perform morphological closing to get rid of any gaps
-    img_close = skimage.morphology.closing(img, footprint=np.ones((7, 7), dtype='uint8'))
+    img_close = skimage.morphology.closing(np.array(img), footprint=np.ones((7, 7), dtype='uint8'))
 
     # Get contours
     contours, hierarchy = cv2.findContours(np.copy(img_close), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
